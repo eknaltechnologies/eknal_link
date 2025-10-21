@@ -54,20 +54,12 @@
         <span>{{ file.title }}</span>
         <div class="flex gap-2">
           <a href="{{ url_for('download', file_id=file.id) }}" download class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">Download</a>
-          <a href="{{ url_for('edit_file', file_id=file.id) }}" class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-sm">Edit</a>
+          <a href="{{ url_for('preview_file', file_id=file.id) }}" class="bg-yellow-400 hover:bg-yellow-500 text-white px-3 py-1 rounded text-sm">Preview</a>
           <a href="{{ url_for('delete_file', file_id=file.id) }}" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm"
              onclick="return confirm('Are you sure you want to delete this file?');">Delete</a>
         </div>
       </div>
-
-      <!-- File Preview (Visible Immediately) -->
-      <div class="w-full border rounded-lg overflow-hidden">
-        <iframe 
-          src="{{ url_for('preview_file', file_id=file.id) }}" 
-          class="w-full h-64 sm:h-80" 
-          loading="lazy">
-        </iframe>
-      </div>
+      
     </div>
     {% endfor %}
   </div>

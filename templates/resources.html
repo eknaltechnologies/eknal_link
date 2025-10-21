@@ -42,28 +42,17 @@
 
       <!-- Files Section -->
       {% for file in files %}
-      <div class="bg-white p-4 rounded-xl shadow-md flex flex-col items-center text-center border border-gray-200">
-        <p class="font-semibold mb-3 text-gray-800">{{ file.title }}</p>
-
-        <!-- Inline Preview (Visible Immediately) -->
-        <div class="w-full mb-3">
-          <iframe
-            src="{{ url_for('preview_file', file_id=file.id) }}"
-            class="w-full h-96 rounded-lg border"
-            loading="lazy"
-          ></iframe>
+    <div class="bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-semibold p-4 rounded-2xl">
+      <div class="flex justify-between items-center">
+        <span>{{ file.title }}</span>
+        <div class="flex gap-2">
+          <a href="{{ url_for('download', file_id=file.id) }}" download class="bg-white hover:bg-grey text-black px-3 rounded text-sm">Download</a>
+          <a href="{{ url_for('preview_file', file_id=file.id) }}" class="bg-yellow-400 hover:bg-yellow-500 text-black px-3 rounded text-sm">Preview</a>
         </div>
-
-        <!-- Download Button Only -->
-        <a
-          href="{{ url_for('public_download', file_id=file.id) }}"
-          download
-          class="px-4 py-2 rounded-lg font-medium bg-indigo-600 text-white shadow hover:bg-indigo-700 transition"
-        >
-          Download
-        </a>
       </div>
-      {% endfor %}
+      
+    </div>
+    {% endfor %}
     </main>
   </div>
 
