@@ -6,17 +6,91 @@
 <title>Edit Link</title>
 <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 min-h-screen flex items-center justify-center p-6 text-white">
 
-<div class="max-w-md w-full p-6 bg-gray-800 rounded-2xl shadow-lg">
-  <h2 class="text-2xl font-bold mb-4 text-cyan-400">Edit Link</h2>
-  <form method="POST" class="flex flex-col gap-4">
-    <input type="text" name="title" value="{{ link.title }}" placeholder="Link Title" class="w-full p-2 rounded bg-gray-700 text-white" required>
-    <input type="url" name="url" value="{{ link.url }}" placeholder="Link URL" class="w-full p-2 rounded bg-gray-700 text-white" required>
-    <button type="submit" class="bg-cyan-500 hover:bg-cyan-600 py-2 rounded font-semibold transition">Update Link</button>
+<body class="min-h-screen flex items-center justify-center
+             bg-gradient-to-b from-blue-50 via-white to-indigo-100
+             text-gray-900 relative overflow-hidden">
+
+<!-- Background pattern -->
+<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]
+            opacity-10 pointer-events-none"></div>
+
+<!-- Card -->
+<div class="relative z-10 w-full max-w-md
+            bg-white/80 backdrop-blur
+            rounded-2xl shadow-xl p-8">
+
+  <!-- Title -->
+  <h2 class="text-2xl font-bold text-indigo-700 text-center mb-2">
+    Edit Link
+  </h2>
+
+  <p class="text-sm text-gray-600 text-center mb-6">
+    Update your link information below
+  </p>
+
+  <!-- Form -->
+  <form method="POST" class="space-y-5">
+
+    <input
+      type="text"
+      name="title"
+      value="{{ link.title }}"
+      placeholder="Link Title"
+      required
+      class="w-full px-4 py-3 rounded-lg border
+             focus:ring-2 focus:ring-indigo-400
+             outline-none text-sm"
+    >
+
+    <input
+      type="url"
+      name="url"
+      value="{{ link.url }}"
+      placeholder="Link URL"
+      required
+      class="w-full px-4 py-3 rounded-lg border
+             focus:ring-2 focus:ring-indigo-400
+             outline-none text-sm"
+    >
+
+    <button
+      type="submit"
+      class="w-full py-3 rounded-xl font-semibold text-white
+             bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500
+             hover:from-yellow-500 hover:via-orange-500 hover:to-amber-500
+             transition"
+    >
+      Save Changes
+    </button>
+
   </form>
-  <a href="{{ url_for('dashboard') }}" class="text-cyan-400 mt-4 inline-block">Back to Dashboard</a>
-</div>
 
+  <!-- Back -->
+  <div class="text-center mt-6">
+    <a href="{{ url_for('dashboard') }}"
+       class="text-indigo-600 font-medium hover:underline">
+      Back to Dashboard
+    </a>
+  </div>
+
+</div>
+<script>
+const toast = document.getElementById("toast");
+
+if (toast) {
+  setTimeout(() => {
+    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
+  }, 100);
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+  }, 2500);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+</script>
 </body>
 </html>

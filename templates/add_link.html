@@ -49,7 +49,23 @@
     </p>
 
 </div>
+<script>
+const toast = document.getElementById("toast");
 
+if (toast) {
+  setTimeout(() => {
+    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
+  }, 100);
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+  }, 2500);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+</script>
 </body>
 </html>
 

@@ -81,6 +81,14 @@ def home():
     return redirect(url_for("resources"))
 
 # ---------------- ADMIN AUTH ----------------
+@app.route("/admin-entry")
+def admin_entry():
+    if session.get("is_admin"):
+        session.pop("is_admin")
+        flash("Logged out", "info")
+        return redirect(url_for("resources"))
+    else:
+        return redirect(url_for("admin_login"))
 @app.route("/admin-login", methods=["GET", "POST"])
 def admin_login():
     if session.get("is_admin"):
@@ -146,7 +154,7 @@ def edit_link(id):
         flash("Link updated", "success")
         return redirect(url_for("dashboard"))
 
-    return render_template("edit_link.html", link=link)
+    return render_template("edit_link.html", link=link)\
 
 @app.route("/delete-link/<int:id>", methods=["POST"])
 @admin_required
@@ -181,7 +189,18 @@ def add_file():
         return redirect(url_for("dashboard"))
 
     return render_template("add_file.html")
+@app.route("/edit-file/<int:id>", methods=["GET", "POST"])
+@admin_required
+def edit_file(id):
+    file = FileUpload.query.get_or_404(id)
 
+    if request.method == "POST":
+        file.title = request.form["title"]
+        db.session.commit()
+        flash("File updated", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template("edit_file.html", file=file)
 @app.route("/download/<int:id>")
 def download(id):
     f = FileUpload.query.get_or_404(id)
@@ -427,6 +446,7 @@ def self_edit_collaborator():
         return redirect(url_for("collaborators"))
 
     return render_template("self_edit.html", collaborator=collaborator)
+
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     with app.app_context():
