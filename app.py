@@ -1,11 +1,11 @@
 import os
+import re
 from flask import Flask, render_template, redirect, url_for, request, flash, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from functools import wraps
 from dotenv import load_dotenv
 load_dotenv()
-import os
 import redis
 import smtplib
 from email.message import EmailMessage
@@ -27,7 +27,7 @@ redis_client = redis.Redis(
 )
 # ---------------- APP ----------------
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "super-secret-key"
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", os.urandom(24).hex())
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -41,8 +41,8 @@ if not os.path.exists(UPLOAD_FOLDER):
 db = SQLAlchemy(app)
 
 # ---------------- ADMIN CREDENTIALS ----------------
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 
 # ---------------- MODELS ----------------
 class Link(db.Model):
@@ -154,7 +154,7 @@ def edit_link(id):
         flash("Link updated", "success")
         return redirect(url_for("dashboard"))
 
-    return render_template("edit_link.html", link=link)\
+    return render_template("edit_link.html", link=link)
 
 @app.route("/delete-link/<int:id>", methods=["POST"])
 @admin_required
@@ -170,10 +170,10 @@ def delete_link(id):
 @admin_required
 def add_file():
     if request.method == "POST":
-        file = request.files["file"]
-
-        if not allowed_file(file.filename):
-            flash("Invalid file type", "danger")
+        file = request.files.get("file")
+        
+        if not file or file.filename == '' or not allowed_file(file.filename):
+            flash("No file selected or invalid file type", "danger")
             return redirect(url_for("add_file"))
 
         filename = secure_filename(file.filename)
@@ -218,13 +218,14 @@ def preview_file(id):
 @admin_required
 def delete_file(id):
     f = FileUpload.query.get_or_404(id)
-
     path = os.path.join(UPLOAD_FOLDER, f.filename)
-    if os.path.exists(path):
-        os.remove(path)
-
+    
     db.session.delete(f)
     db.session.commit()
+    
+    if os.path.exists(path):
+        os.remove(path)
+    
     flash("File deleted", "success")
     return redirect(url_for("dashboard"))
 
@@ -367,20 +368,19 @@ def delete_otp(email):
 @app.route("/request-edit", methods=["GET", "POST"])
 def request_edit():
     if request.method == "POST":
-        # from datetime import datetime
-        # datetime=datetime.now()
-        # print(datetime)
-        from time import perf_counter
-        start=perf_counter()
         email = request.form["email"].strip()
         
-
         # 1) Empty check
         if not email:
             flash("Please enter your email address", "danger")
             return redirect(url_for("request_edit"))
-
-    
+        
+        # 2) Email format validation
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            flash("Invalid email format", "danger")
+            return redirect(url_for("request_edit"))
+        
         # 3) Check in database
         collaborator = Collaborator.query.filter_by(email=email).first()
 
@@ -390,17 +390,9 @@ def request_edit():
 
         # 4) Generate + Send OTP
         otp = generate_otp()
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 367")
-        start=perf_counter()
         save_otp(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 371")
-        start=perf_counter()
-        
         send_email(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 376")
+        
         session["otp_email"] = email
         flash("Verification code sent to your email.", "success")
         return redirect(url_for("verify_otp"))
