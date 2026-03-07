@@ -62,7 +62,6 @@ class Collaborator(db.Model):
     resume_url = db.Column(db.String(300), nullable=False)
     contribution = db.Column(db.String(300), nullable=False)
 
-# ---------------- HELPERS ----------------
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
