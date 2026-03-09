@@ -356,7 +356,7 @@ def generate_otp():
     return str(random.randint(100000, 999999))
 
 def save_otp(email, otp):
-    redis_client.setex(f"otp:{email}", 300, otp)
+    return redis_client.setex(f"otp:{email}", 300, otp)
 
 def get_otp(email):
     return redis_client.get(f"otp:{email}")
@@ -390,17 +390,22 @@ def request_edit():
 
         # 4) Generate + Send OTP
         otp = generate_otp()
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 367")
-        start=perf_counter()
-        save_otp(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 371")
-        start=perf_counter()
-        
-        send_email(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 376")
+
+        # Save OTP to Redis FIRST and verify it succeeded
+        result = save_otp(email, otp)
+        if not result:
+            flash("Could not generate verification code. Please try again.", "danger")
+            return redirect(url_for("request_edit"))
+
+        # Only send email if Redis write confirmed
+        try:
+            send_email(email, otp)
+        except Exception:
+            # If email fails, clean up Redis so user can retry immediately
+            delete_otp(email)
+            flash("Failed to send verification email. Please try again.", "danger")
+            return redirect(url_for("request_edit"))
+
         session["otp_email"] = email
         flash("Verification code sent to your email.", "success")
         return redirect(url_for("verify_otp"))
