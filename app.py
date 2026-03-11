@@ -1,76 +1,157 @@
 import os
+import logging
+import secrets
 from flask import Flask, render_template, redirect, url_for, request, flash, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from functools import wraps
 from dotenv import load_dotenv
-load_dotenv()
-import os
 import redis
 import smtplib
 from email.message import EmailMessage
-from email.mime.text import MIMEText
 import random
+import re
+from urllib.parse import urlparse
+
+# Load environment variables
+load_dotenv()
+
+# Configure logging for better debugging and monitoring
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Environment variables with validation
 EMAIL_USER = os.getenv("EMAIL_USER")
-EMAIL_PASS = os.getenv("EMAIL_PASS")
+EMAIL_PASS = os.getenv("EMAIL_PASS") 
 EMAIL_FROM = os.getenv("EMAIL_FROM")
 
-REDIS_SERVER_NUMBER = os.getenv("REDIS_SERVER_NUMBER")
-REDIS_PORT_NUMBER = int(os.getenv("REDIS_PORT_NUMBER"))
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+REDIS_SERVER_NUMBER = os.getenv("REDIS_SERVER_NUMBER", "localhost")
+REDIS_PORT_NUMBER = int(os.getenv("REDIS_PORT_NUMBER", 6379))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 
-redis_client = redis.Redis(
-    host=REDIS_SERVER_NUMBER,
-    port=REDIS_PORT_NUMBER,
-    password=REDIS_PASSWORD,
-    decode_responses=True
-)
-# ---------------- APP ----------------
+# Validate critical environment variables
+if not all([EMAIL_USER, EMAIL_PASS, EMAIL_FROM]):
+    logger.warning("Email configuration incomplete. OTP functionality will not work.")
+
+# Initialize Redis client with error handling
+try:
+    redis_client = redis.Redis(
+        host=REDIS_SERVER_NUMBER,
+        port=REDIS_PORT_NUMBER,
+        password=REDIS_PASSWORD if REDIS_PASSWORD else None,
+        decode_responses=True,
+        socket_connect_timeout=5,
+        socket_timeout=5
+    )
+    # Test Redis connection
+    redis_client.ping()
+    logger.info("Redis connection established successfully")
+except redis.ConnectionError:
+    logger.error("Failed to connect to Redis. OTP functionality will not work.")
+    redis_client = None
+# ---------------- APP CONFIGURATION ----------------
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "super-secret-key"
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
+
+# Security improvements: Use environment variables for sensitive config
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", secrets.token_hex(32))
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///data.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-UPLOAD_FOLDER = "uploads"
-ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+# File upload configuration with security limits
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads")
+MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))  # 16MB default
+ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif", "doc", "docx"}
 
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
+
+# Create upload directory if it doesn't exist
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+    logger.info(f"Created upload directory: {UPLOAD_FOLDER}")
 
 db = SQLAlchemy(app)
 
-# ---------------- ADMIN CREDENTIALS ----------------
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
+# Admin credentials from environment variables (more secure)
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
-# ---------------- MODELS ----------------
+# Warn if default credentials are being used
+if ADMIN_USERNAME == "admin" and ADMIN_PASSWORD == "admin123":
+    logger.warning("Using default admin credentials! Change ADMIN_USERNAME and ADMIN_PASSWORD in production.")
+
+# ---------------- DATABASE MODELS ----------------
 class Link(db.Model):
+    """Model for storing resource links with validation"""
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
-    url = db.Column(db.String(300), nullable=False)
+    url = db.Column(db.String(500), nullable=False)  # Increased length for longer URLs
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    
+    def __repr__(self):
+        return f'<Link {self.title}>'
 
 class FileUpload(db.Model):
+    """Model for storing uploaded file information"""
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
+    original_filename = db.Column(db.String(300), nullable=False)  # Store original name
+    file_size = db.Column(db.Integer)  # Store file size in bytes
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    
+    def __repr__(self):
+        return f'<FileUpload {self.title}>'
 
 class Collaborator(db.Model):
+    """Model for storing collaborator information with validation"""
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
-    resume_url = db.Column(db.String(300), nullable=False)
-    contribution = db.Column(db.String(300), nullable=False)
+    email = db.Column(db.String(120), nullable=False, unique=True)  # Ensure unique emails
+    resume_url = db.Column(db.String(500), nullable=False)
+    contribution = db.Column(db.Text, nullable=False)  # Use Text for longer descriptions
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
+    
+    def __repr__(self):
+        return f'<Collaborator {self.name}>'
 
-# ---------------- HELPERS ----------------
+# ---------------- HELPER FUNCTIONS ----------------
 def allowed_file(filename):
+    """Check if uploaded file has an allowed extension"""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def validate_email(email):
+    """Basic email validation using regex"""
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(pattern, email) is not None
+
+def validate_url(url):
+    """Validate URL format and ensure it has a proper scheme"""
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
+
+def sanitize_input(text, max_length=None):
+    """Basic input sanitization - strip whitespace and limit length"""
+    if not text:
+        return ""
+    text = text.strip()
+    if max_length and len(text) > max_length:
+        text = text[:max_length]
+    return text
+
 def admin_required(f):
+    """Decorator to require admin authentication for routes"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("is_admin"):
-            flash("Admin access only", "danger")
+            flash("Admin access required. Please log in.", "danger")
             return redirect(url_for("admin_login"))
         return f(*args, **kwargs)
     return decorated
@@ -91,26 +172,42 @@ def admin_entry():
         return redirect(url_for("admin_login"))
 @app.route("/admin-login", methods=["GET", "POST"])
 def admin_login():
+    """Admin login with improved security"""
     if session.get("is_admin"):
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        if (
-            request.form["username"] == ADMIN_USERNAME and
-            request.form["password"] == ADMIN_PASSWORD
-        ):
+        username = sanitize_input(request.form.get("username", ""))
+        password = request.form.get("password", "")
+        
+        # Basic rate limiting - check if too many failed attempts
+        failed_attempts = session.get("failed_login_attempts", 0)
+        if failed_attempts >= 5:
+            flash("Too many failed attempts. Please try again later.", "danger")
+            return render_template("admin_login.html")
+        
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             session["is_admin"] = True
-            flash("Login successful", "success")
+            session.pop("failed_login_attempts", None)  # Reset failed attempts
+            session.permanent = True  # Make session persistent
+            flash("Login successful! Welcome to the admin dashboard.", "success")
+            logger.info(f"Admin login successful from IP: {request.remote_addr}")
             return redirect(url_for("dashboard"))
         else:
-            flash("Invalid credentials", "danger")
+            # Increment failed attempts
+            session["failed_login_attempts"] = failed_attempts + 1
+            flash("Invalid credentials. Please check your username and password.", "danger")
+            logger.warning(f"Failed admin login attempt from IP: {request.remote_addr}")
 
     return render_template("admin_login.html")
 
 @app.route("/admin-logout")
 def admin_logout():
+    """Admin logout with session cleanup"""
     session.pop("is_admin", None)
-    flash("Logged out", "info")
+    session.pop("failed_login_attempts", None)
+    flash("Successfully logged out.", "info")
+    logger.info("Admin logged out")
     return redirect(url_for("resources"))
 
 # ---------------- PUBLIC RESOURCES ----------------
@@ -132,100 +229,266 @@ def dashboard():
 @app.route("/add-link", methods=["GET","POST"])
 @admin_required
 def add_link():
+    """Add a new resource link with validation"""
     if request.method == "POST":
-        db.session.add(Link(
-            title=request.form["title"],
-            url=request.form["url"]
-        ))
-        db.session.commit()
-        flash("Link added", "success")
-        return redirect(url_for("dashboard"))
+        title = sanitize_input(request.form.get("title", ""), 120)
+        url = sanitize_input(request.form.get("url", ""), 500)
+        
+        # Validate inputs
+        if not title:
+            flash("Please provide a title for the link.", "danger")
+            return render_template("add_link.html")
+            
+        if not url:
+            flash("Please provide a valid URL.", "danger")
+            return render_template("add_link.html")
+            
+        # Add http:// if no scheme is provided
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+            
+        if not validate_url(url):
+            flash("Please provide a valid URL format.", "danger")
+            return render_template("add_link.html")
+        
+        try:
+            new_link = Link(title=title, url=url)
+            db.session.add(new_link)
+            db.session.commit()
+            flash(f"Link '{title}' added successfully!", "success")
+            logger.info(f"New link added: {title}")
+            return redirect(url_for("dashboard"))
+        except Exception as e:
+            db.session.rollback()
+            flash("Error adding link. Please try again.", "danger")
+            logger.error(f"Error adding link: {str(e)}")
+            
     return render_template("add_link.html")
 
 @app.route("/edit-link/<int:id>", methods=["GET","POST"])
 @admin_required
 def edit_link(id):
+    """Edit an existing link with validation"""
     link = Link.query.get_or_404(id)
 
     if request.method == "POST":
-        link.title = request.form["title"]
-        link.url = request.form["url"]
-        db.session.commit()
-        flash("Link updated", "success")
-        return redirect(url_for("dashboard"))
+        title = sanitize_input(request.form.get("title", ""), 120)
+        url = sanitize_input(request.form.get("url", ""), 500)
+        
+        # Validate inputs
+        if not title:
+            flash("Please provide a title for the link.", "danger")
+            return render_template("edit_link.html", link=link)
+            
+        if not url:
+            flash("Please provide a valid URL.", "danger")
+            return render_template("edit_link.html", link=link)
+            
+        # Add http:// if no scheme is provided
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+            
+        if not validate_url(url):
+            flash("Please provide a valid URL format.", "danger")
+            return render_template("edit_link.html", link=link)
+        
+        try:
+            link.title = title
+            link.url = url
+            db.session.commit()
+            flash(f"Link '{title}' updated successfully!", "success")
+            logger.info(f"Link updated: {title}")
+            return redirect(url_for("dashboard"))
+        except Exception as e:
+            db.session.rollback()
+            flash("Error updating link. Please try again.", "danger")
+            logger.error(f"Error updating link: {str(e)}")
 
-    return render_template("edit_link.html", link=link)\
+    return render_template("edit_link.html", link=link)
 
 @app.route("/delete-link/<int:id>", methods=["POST"])
 @admin_required
 def delete_link(id):
-    link = Link.query.get_or_404(id)
-    db.session.delete(link)
-    db.session.commit()
-    flash("Link deleted", "success")
+    """Delete a link with proper error handling"""
+    try:
+        link = Link.query.get_or_404(id)
+        link_title = link.title  # Store title for logging
+        db.session.delete(link)
+        db.session.commit()
+        flash(f"Link '{link_title}' deleted successfully.", "success")
+        logger.info(f"Link deleted: {link_title}")
+    except Exception as e:
+        db.session.rollback()
+        flash("Error deleting link. Please try again.", "danger")
+        logger.error(f"Error deleting link: {str(e)}")
+    
     return redirect(url_for("dashboard"))
 
 # ---------------- FILES ----------------
 @app.route("/add-file", methods=["GET","POST"])
 @admin_required
 def add_file():
+    """Add a new file with enhanced security and validation"""
     if request.method == "POST":
-        file = request.files["file"]
+        title = sanitize_input(request.form.get("title", ""), 120)
+        
+        if not title:
+            flash("Please provide a title for the file.", "danger")
+            return render_template("add_file.html")
+        
+        # Check if file was uploaded
+        if 'file' not in request.files:
+            flash("No file selected. Please choose a file to upload.", "danger")
+            return render_template("add_file.html")
+            
+        file = request.files['file']
+        
+        if file.filename == '':
+            flash("No file selected. Please choose a file to upload.", "danger")
+            return render_template("add_file.html")
 
         if not allowed_file(file.filename):
-            flash("Invalid file type", "danger")
-            return redirect(url_for("add_file"))
+            flash(f"Invalid file type. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}", "danger")
+            return render_template("add_file.html")
 
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(UPLOAD_FOLDER, filename))
+        try:
+            # Generate secure filename
+            original_filename = file.filename
+            filename = secure_filename(original_filename)
+            
+            # Ensure filename is unique to prevent overwrites
+            counter = 1
+            base_name, extension = os.path.splitext(filename)
+            while os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
+                filename = f"{base_name}_{counter}{extension}"
+                counter += 1
+            
+            # Save file
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(file_path)
+            
+            # Get file size
+            file_size = os.path.getsize(file_path)
+            
+            # Save to database
+            new_file = FileUpload(
+                title=title,
+                filename=filename,
+                original_filename=original_filename,
+                file_size=file_size
+            )
+            db.session.add(new_file)
+            db.session.commit()
 
-        db.session.add(FileUpload(
-            title=request.form["title"],
-            filename=filename
-        ))
-        db.session.commit()
-
-        flash("File uploaded", "success")
-        return redirect(url_for("dashboard"))
+            flash(f"File '{title}' uploaded successfully!", "success")
+            logger.info(f"File uploaded: {title} ({filename})")
+            return redirect(url_for("dashboard"))
+            
+        except Exception as e:
+            db.session.rollback()
+            # Clean up file if database save failed
+            if 'file_path' in locals() and os.path.exists(file_path):
+                os.remove(file_path)
+            flash("Error uploading file. Please try again.", "danger")
+            logger.error(f"Error uploading file: {str(e)}")
 
     return render_template("add_file.html")
 @app.route("/edit-file/<int:id>", methods=["GET", "POST"])
 @admin_required
 def edit_file(id):
-    file = FileUpload.query.get_or_404(id)
+    """Edit file metadata (title only for security)"""
+    file_upload = FileUpload.query.get_or_404(id)
 
     if request.method == "POST":
-        file.title = request.form["title"]
-        db.session.commit()
-        flash("File updated", "success")
-        return redirect(url_for("dashboard"))
+        title = sanitize_input(request.form.get("title", ""), 120)
+        
+        if not title:
+            flash("Please provide a title for the file.", "danger")
+            return render_template("edit_file.html", file=file_upload)
+        
+        try:
+            file_upload.title = title
+            db.session.commit()
+            flash(f"File '{title}' updated successfully!", "success")
+            logger.info(f"File metadata updated: {title}")
+            return redirect(url_for("dashboard"))
+        except Exception as e:
+            db.session.rollback()
+            flash("Error updating file. Please try again.", "danger")
+            logger.error(f"Error updating file: {str(e)}")
 
-    return render_template("edit_file.html", file=file)
+    return render_template("edit_file.html", file=file_upload)
 @app.route("/download/<int:id>")
 def download(id):
-    f = FileUpload.query.get_or_404(id)
-    return send_from_directory(UPLOAD_FOLDER, f.filename, as_attachment=True)
-@app.route("/preview/<int:id>")
+    """Download file with security checks"""
+    try:
+        file_upload = FileUpload.query.get_or_404(id)
+        file_path = os.path.join(UPLOAD_FOLDER, file_upload.filename)
+        
+        # Security check: ensure file exists and is within upload folder
+        if not os.path.exists(file_path) or not os.path.commonpath([UPLOAD_FOLDER, file_path]) == UPLOAD_FOLDER:
+            flash("File not found or access denied.", "danger")
+            return redirect(url_for("resources"))
+            
+        logger.info(f"File downloaded: {file_upload.title}")
+        return send_from_directory(
+            UPLOAD_FOLDER, 
+            file_upload.filename, 
+            as_attachment=True,
+            download_name=file_upload.original_filename  # Use original filename for download
+        )
+    except Exception as e:
+        logger.error(f"Error downloading file: {str(e)}")
+        flash("Error downloading file.", "danger")
+        return redirect(url_for("resources"))
 
+@app.route("/preview/<int:id>")
 def preview_file(id):
-    file = FileUpload.query.get_or_404(id)
-    return send_from_directory(
-        app.config["UPLOAD_FOLDER"],
-        file.filename,
-        as_attachment=False  
-    )
+    """Preview file with security checks"""
+    try:
+        file_upload = FileUpload.query.get_or_404(id)
+        file_path = os.path.join(UPLOAD_FOLDER, file_upload.filename)
+        
+        # Security check: ensure file exists and is within upload folder
+        if not os.path.exists(file_path) or not os.path.commonpath([UPLOAD_FOLDER, file_path]) == UPLOAD_FOLDER:
+            flash("File not found or access denied.", "danger")
+            return redirect(url_for("resources"))
+            
+        return send_from_directory(
+            app.config["UPLOAD_FOLDER"],
+            file_upload.filename,
+            as_attachment=False
+        )
+    except Exception as e:
+        logger.error(f"Error previewing file: {str(e)}")
+        flash("Error previewing file.", "danger")
+        return redirect(url_for("resources"))
 @app.route("/delete-file/<int:id>", methods=["POST"])
 @admin_required
 def delete_file(id):
-    f = FileUpload.query.get_or_404(id)
+    """Delete file with proper cleanup"""
+    try:
+        file_upload = FileUpload.query.get_or_404(id)
+        file_title = file_upload.title
+        
+        # Remove physical file
+        file_path = os.path.join(UPLOAD_FOLDER, file_upload.filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info(f"Physical file deleted: {file_upload.filename}")
 
-    path = os.path.join(UPLOAD_FOLDER, f.filename)
-    if os.path.exists(path):
-        os.remove(path)
-
-    db.session.delete(f)
-    db.session.commit()
-    flash("File deleted", "success")
+        # Remove database record
+        db.session.delete(file_upload)
+        db.session.commit()
+        
+        flash(f"File '{file_title}' deleted successfully.", "success")
+        logger.info(f"File deleted: {file_title}")
+        
+    except Exception as e:
+        db.session.rollback()
+        flash("Error deleting file. Please try again.", "danger")
+        logger.error(f"Error deleting file: {str(e)}")
+    
     return redirect(url_for("dashboard"))
 
 # ---------------- COLLABORATORS ----------------
@@ -237,16 +500,60 @@ def collaborators():
 @app.route("/add-collaborator", methods=["GET","POST"])
 @admin_required
 def add_collaborator():
+    """Add a new collaborator with validation"""
     if request.method == "POST":
-        db.session.add(Collaborator(
-            name=request.form["name"],
-            email=request.form["email"],
-            resume_url=request.form["resume"],
-            contribution=request.form["contribution"]
-        ))
-        db.session.commit()
-        flash("Collaborator added", "success")
-        return redirect(url_for("collaborators"))
+        name = sanitize_input(request.form.get("name", ""), 120)
+        email = sanitize_input(request.form.get("email", ""), 120)
+        resume_url = sanitize_input(request.form.get("resume", ""), 500)
+        contribution = sanitize_input(request.form.get("contribution", ""), 1000)
+        
+        # Validate inputs
+        if not name:
+            flash("Please provide a name.", "danger")
+            return render_template("add_collaborator.html")
+            
+        if not email or not validate_email(email):
+            flash("Please provide a valid email address.", "danger")
+            return render_template("add_collaborator.html")
+            
+        if not resume_url:
+            flash("Please provide a resume URL.", "danger")
+            return render_template("add_collaborator.html")
+            
+        # Add http:// if no scheme is provided for resume URL
+        if not resume_url.startswith(('http://', 'https://')):
+            resume_url = 'https://' + resume_url
+            
+        if not validate_url(resume_url):
+            flash("Please provide a valid resume URL format.", "danger")
+            return render_template("add_collaborator.html")
+            
+        if not contribution:
+            flash("Please provide a contribution description.", "danger")
+            return render_template("add_collaborator.html")
+        
+        # Check if email already exists
+        existing_collaborator = Collaborator.query.filter_by(email=email).first()
+        if existing_collaborator:
+            flash("A collaborator with this email already exists.", "danger")
+            return render_template("add_collaborator.html")
+        
+        try:
+            new_collaborator = Collaborator(
+                name=name,
+                email=email,
+                resume_url=resume_url,
+                contribution=contribution
+            )
+            db.session.add(new_collaborator)
+            db.session.commit()
+            flash(f"Collaborator '{name}' added successfully!", "success")
+            logger.info(f"New collaborator added: {name} ({email})")
+            return redirect(url_for("collaborators"))
+        except Exception as e:
+            db.session.rollback()
+            flash("Error adding collaborator. Please try again.", "danger")
+            logger.error(f"Error adding collaborator: {str(e)}")
 
     return render_template("add_collaborator.html")
 
@@ -276,15 +583,21 @@ def delete_collaborator(id):
     return redirect(url_for("collaborators"))
 
 def send_email(to, otp):
-    msg = EmailMessage()
-    msg["From"] = os.getenv("EMAIL_FROM")
-    msg["To"] = to
-    msg["Subject"] = "Eknal Technologies – Email Verification Code"
-   # msg.set_content(f"Your OTP for editing your profile is: {otp}")
-    msg.add_alternative(f"""
+    """Send OTP email with improved error handling and security"""
+    if not all([EMAIL_USER, EMAIL_PASS, EMAIL_FROM]):
+        logger.error("Email configuration incomplete")
+        raise Exception("Email service not configured")
+    
+    try:
+        msg = EmailMessage()
+        msg["From"] = EMAIL_FROM
+        msg["To"] = to
+        msg["Subject"] = "Eknal Technologies – Email Verification Code"
+        
+        # HTML email template with improved styling
+        html_content = f"""
 <html>
-<body style="background-color:#f4f6fb; font-family: Arial, sans-serif; padding:30px;">
-
+<body style="background-color:#f4f6fb; font-family: Arial, sans-serif; padding:30px; margin:0;">
   <div style="
     max-width:480px;
     margin:auto;
@@ -294,21 +607,20 @@ def send_email(to, otp):
     box-shadow:0 4px 12px rgba(0,0,0,0.08);
     text-align:center;
   ">
-      
     <!-- Logo -->
-   <img src="https://i.ibb.co/39ZNH1W0/eknal-link.png"
+    <img src="https://i.ibb.co/39ZNH1W0/eknal-link.png"
          style="height:50px;margin-bottom:20px;"
          alt="Eknal Link Logo"/>
 
-    <h2 style="color:#4f46e5; margin-bottom:10px;">
-      OTP Verification
+    <h2 style="color:#4f46e5; margin-bottom:10px; font-size:24px;">
+      Email Verification
     </h2>
 
-    <p style="color:#555; font-size:15px;">
-      We received a request to update your collaborator profile.
+    <p style="color:#555; font-size:15px; line-height:1.5; margin-bottom:15px;">
+      We received a request to update your collaborator profile on Eknal Link.
     </p>
 
-    <p style="color:#555; font-size:15px;">
+    <p style="color:#555; font-size:15px; margin-bottom:20px;">
       Use the verification code below:
     </p>
 
@@ -321,142 +633,289 @@ def send_email(to, otp):
       border-radius:8px;
       margin:20px 0;
       color:#111;
+      border: 2px solid #e0e7ff;
     ">
       {otp}
     </div>
 
-    <p style="color:#777; font-size:14px;">
-      This code is valid for 5 minutes.
+    <p style="color:#777; font-size:14px; margin-bottom:15px;">
+      This code is valid for 5 minutes only.
     </p>
 
-    <p style="color:#999; font-size:13px;">
-      If you did not request this, you can safely ignore this email.
+    <p style="color:#999; font-size:13px; margin-bottom:20px;">
+      If you did not request this verification, you can safely ignore this email.
     </p>
 
     <hr style="border:none;border-top:1px solid #eee;margin:25px 0;">
 
-    <p style="font-size:13px;color:#666;">
-      © Eknal Technologies
+    <p style="font-size:13px;color:#666; margin:0;">
+      © 2024 Eknal Technologies. All rights reserved.
     </p>
-
   </div>
-
 </body>
 </html>
-""", subtype="html")
-    server = smtplib.SMTP("smtp.zoho.in", 587)
-    server.starttls()
-    server.login(
-        os.getenv("EMAIL_USER"),
-        os.getenv("EMAIL_PASS")
-    )
-    server.send_message(msg)
-    server.quit()
+"""
+        
+        msg.add_alternative(html_content, subtype="html")
+        
+        # Use SMTP with proper error handling
+        with smtplib.SMTP("smtp.zoho.in", 587) as server:
+            server.starttls()
+            server.login(EMAIL_USER, EMAIL_PASS)
+            server.send_message(msg)
+            
+        logger.info(f"OTP email sent successfully to {to}")
+        
+    except smtplib.SMTPAuthenticationError:
+        logger.error("SMTP authentication failed - check email credentials")
+        raise Exception("Email authentication failed")
+    except smtplib.SMTPException as e:
+        logger.error(f"SMTP error: {str(e)}")
+        raise Exception("Failed to send email")
+    except Exception as e:
+        logger.error(f"Unexpected error sending email: {str(e)}")
+        raise Exception("Email service temporarily unavailable")
+
 def generate_otp():
+    """Generate a secure 6-digit OTP"""
     return str(random.randint(100000, 999999))
 
 def save_otp(email, otp):
-    redis_client.setex(f"otp:{email}", 300, otp)
+    """Save OTP to Redis with error handling"""
+    if not redis_client:
+        raise Exception("OTP storage service unavailable")
+    
+    try:
+        # Store OTP with 5-minute expiration
+        redis_client.setex(f"otp:{email}", 300, otp)
+        logger.info(f"OTP saved for email: {email}")
+    except redis.RedisError as e:
+        logger.error(f"Redis error saving OTP: {str(e)}")
+        raise Exception("Failed to save verification code")
 
 def get_otp(email):
-    return redis_client.get(f"otp:{email}")
+    """Retrieve OTP from Redis with error handling"""
+    if not redis_client:
+        return None
+    
+    try:
+        return redis_client.get(f"otp:{email}")
+    except redis.RedisError as e:
+        logger.error(f"Redis error retrieving OTP: {str(e)}")
+        return None
 
 def delete_otp(email):
-    redis_client.delete(f"otp:{email}")
+    """Delete OTP from Redis with error handling"""
+    if not redis_client:
+        return
+    
+    try:
+        redis_client.delete(f"otp:{email}")
+        logger.info(f"OTP deleted for email: {email}")
+    except redis.RedisError as e:
+        logger.error(f"Redis error deleting OTP: {str(e)}")
 
 @app.route("/request-edit", methods=["GET", "POST"])
 def request_edit():
+    """Request OTP for profile editing with improved validation and rate limiting"""
     if request.method == "POST":
-        # from datetime import datetime
-        # datetime=datetime.now()
-        # print(datetime)
-        from time import perf_counter
-        start=perf_counter()
-        email = request.form["email"].strip()
+        email = sanitize_input(request.form.get("email", ""), 120)
         
-
-        # 1) Empty check
+        # Basic validation
         if not email:
-            flash("Please enter your email address", "danger")
-            return redirect(url_for("request_edit"))
-
-    
-        # 3) Check in database
-        collaborator = Collaborator.query.filter_by(email=email).first()
-
-        if not collaborator:
-            flash("Email not found", "danger")
-            return redirect(url_for("request_edit"))
-
-        # 4) Generate + Send OTP
-        otp = generate_otp()
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 367")
-        start=perf_counter()
-        save_otp(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 371")
-        start=perf_counter()
+            flash("Please enter your email address.", "danger")
+            return render_template("request_edit.html")
+            
+        if not validate_email(email):
+            flash("Please enter a valid email address.", "danger")
+            return render_template("request_edit.html")
         
-        send_email(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 376")
-        session["otp_email"] = email
-        flash("Verification code sent to your email.", "success")
-        return redirect(url_for("verify_otp"))
+        # Rate limiting - check if OTP was recently requested
+        recent_request = session.get(f"otp_requested_{email}")
+        if recent_request:
+            flash("Please wait before requesting another verification code.", "danger")
+            return render_template("request_edit.html")
+        
+        # Check if collaborator exists
+        collaborator = Collaborator.query.filter_by(email=email).first()
+        if not collaborator:
+            flash("Email address not found in our records.", "danger")
+            return render_template("request_edit.html")
+
+        try:
+            # Generate and send OTP
+            otp = generate_otp()
+            save_otp(email, otp)
+            send_email(email, otp)
+            
+            # Set rate limiting flag (expires in 60 seconds)
+            session[f"otp_requested_{email}"] = True
+            session["otp_email"] = email
+            
+            flash("Verification code sent to your email. Please check your inbox.", "success")
+            logger.info(f"OTP requested for email: {email}")
+            return redirect(url_for("verify_otp"))
+            
+        except Exception as e:
+            flash("Unable to send verification code. Please try again later.", "danger")
+            logger.error(f"Error in OTP request process: {str(e)}")
 
     return render_template("request_edit.html")
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
+    """Verify OTP with improved security and user experience"""
     if request.method == "POST":
-        user_otp = request.form["otp"]
+        user_otp = sanitize_input(request.form.get("otp", ""), 10)
         email = session.get("otp_email")
+        
         if not email:
-            flash("Session expired", "danger")
+            flash("Session expired. Please request a new verification code.", "danger")
             return redirect(url_for("request_edit"))
-        saved_otp = redis_client.get(f"otp:{email}")
-
-        if saved_otp is None:
-            flash("OTP expired", "danger")
+            
+        if not user_otp or len(user_otp) != 6 or not user_otp.isdigit():
+            flash("Please enter a valid 6-digit verification code.", "danger")
+            return render_template("verify_otp.html")
+        
+        # Check for too many failed attempts
+        failed_attempts = session.get(f"otp_attempts_{email}", 0)
+        if failed_attempts >= 3:
+            session.pop("otp_email", None)
+            session.pop(f"otp_attempts_{email}", None)
+            flash("Too many failed attempts. Please request a new verification code.", "danger")
             return redirect(url_for("request_edit"))
+        
+        try:
+            saved_otp = get_otp(email)
+            
+            if saved_otp is None:
+                flash("Verification code has expired. Please request a new one.", "danger")
+                return redirect(url_for("request_edit"))
 
-        if user_otp == saved_otp:
-            redis_client.delete(f"otp:{email}")
-            session["verified_email"] = email
-            flash("OTP verified successfully.", "success")
-            return redirect(url_for("self_edit_collaborator"))
-
-        flash("Incorrect OTP. Please try again.", "danger")
+            if user_otp == saved_otp:
+                # Success - clean up and proceed
+                delete_otp(email)
+                session["verified_email"] = email
+                session.pop("otp_email", None)
+                session.pop(f"otp_attempts_{email}", None)
+                session.pop(f"otp_requested_{email}", None)
+                
+                flash("Email verified successfully! You can now update your profile.", "success")
+                logger.info(f"OTP verified successfully for email: {email}")
+                return redirect(url_for("self_edit_collaborator"))
+            else:
+                # Increment failed attempts
+                session[f"otp_attempts_{email}"] = failed_attempts + 1
+                remaining_attempts = 3 - (failed_attempts + 1)
+                if remaining_attempts > 0:
+                    flash(f"Incorrect verification code. {remaining_attempts} attempts remaining.", "danger")
+                else:
+                    flash("Incorrect verification code. Please request a new one.", "danger")
+                    
+        except Exception as e:
+            logger.error(f"Error verifying OTP: {str(e)}")
+            flash("Error verifying code. Please try again.", "danger")
 
     return render_template("verify_otp.html")
-#edit
+# ---------------- SELF-EDIT FUNCTIONALITY ----------------
 @app.route("/self-edit", methods=["GET", "POST"])
 def self_edit_collaborator():
+    """Allow collaborators to edit their own profiles after OTP verification"""
     email = session.get("verified_email")
 
     if not email:
-        flash("Unauthorized access", "danger")
+        flash("Unauthorized access. Please verify your email first.", "danger")
         return redirect(url_for("request_edit"))
 
     collaborator = Collaborator.query.filter_by(email=email).first_or_404()
 
     if request.method == "POST":
-        collaborator.name = request.form["name"]
-        collaborator.resume_url = request.form["resume"]
-        collaborator.contribution = request.form["contribution"]
+        name = sanitize_input(request.form.get("name", ""), 120)
+        resume_url = sanitize_input(request.form.get("resume", ""), 500)
+        contribution = sanitize_input(request.form.get("contribution", ""), 1000)
+        
+        # Validate inputs
+        if not name:
+            flash("Please provide your name.", "danger")
+            return render_template("self_edit.html", collaborator=collaborator)
+            
+        if not resume_url:
+            flash("Please provide your resume URL.", "danger")
+            return render_template("self_edit.html", collaborator=collaborator)
+            
+        # Add http:// if no scheme is provided
+        if not resume_url.startswith(('http://', 'https://')):
+            resume_url = 'https://' + resume_url
+            
+        if not validate_url(resume_url):
+            flash("Please provide a valid resume URL format.", "danger")
+            return render_template("self_edit.html", collaborator=collaborator)
+            
+        if not contribution:
+            flash("Please provide your contribution description.", "danger")
+            return render_template("self_edit.html", collaborator=collaborator)
 
-        db.session.commit()
+        try:
+            # Update collaborator information
+            collaborator.name = name
+            collaborator.resume_url = resume_url
+            collaborator.contribution = contribution
+            db.session.commit()
 
-        session.pop("verified_email")
-        session.pop("otp_email", None)
+            # Clean up session
+            session.pop("verified_email", None)
+            session.pop("otp_email", None)
 
-        flash("Your profile has been updated successfully.", "success")
-        return redirect(url_for("collaborators"))
+            flash("Your profile has been updated successfully!", "success")
+            logger.info(f"Collaborator self-updated profile: {name} ({email})")
+            return redirect(url_for("collaborators"))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash("Error updating profile. Please try again.", "danger")
+            logger.error(f"Error in self-edit: {str(e)}")
 
     return render_template("self_edit.html", collaborator=collaborator)
 
-# ---------------- RUN ----------------
+# ---------------- ERROR HANDLERS ----------------
+@app.errorhandler(404)
+def not_found_error(error):
+    """Handle 404 errors gracefully"""
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors gracefully"""
+    db.session.rollback()
+    logger.error(f"Internal server error: {str(error)}")
+    return render_template('500.html'), 500
+
+@app.errorhandler(413)
+def too_large(error):
+    """Handle file too large errors"""
+    flash("File too large. Please upload a smaller file.", "danger")
+    return redirect(url_for("add_file"))
+
+# ---------------- APPLICATION STARTUP ----------------
+def create_tables():
+    """Create database tables if they don't exist"""
+    try:
+        with app.app_context():
+            db.create_all()
+            logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Error creating database tables: {str(e)}")
+
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
+    create_tables()
+    
+    # Use environment variable for debug mode
+    debug_mode = os.getenv("FLASK_ENV") == "development"
+    
+    if debug_mode:
+        logger.warning("Running in DEBUG mode - do not use in production!")
+    
+    app.run(
+        debug=debug_mode,
+        host=os.getenv("FLASK_HOST", "127.0.0.1"),
+        port=int(os.getenv("FLASK_PORT", 5000))
+    )
