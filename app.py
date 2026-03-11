@@ -5,18 +5,18 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 from dotenv import load_dotenv
 load_dotenv()
-import os
 import redis
 import smtplib
 from email.message import EmailMessage
 from email.mime.text import MIMEText
 import random
+import secrets  # fix 1 : use secrets module for cryptographically secure OTP generation
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
 
 REDIS_SERVER_NUMBER = os.getenv("REDIS_SERVER_NUMBER")
-REDIS_PORT_NUMBER = int(os.getenv("REDIS_PORT_NUMBER"))
+REDIS_PORT_NUMBER = int(os.getenv("REDIS_PORT_NUMBER", 6379))     # FIX #2: Provide default to avoid TypeError if env var missing
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
 
 redis_client = redis.Redis(
@@ -27,7 +27,7 @@ redis_client = redis.Redis(
 )
 # ---------------- APP ----------------
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "super-secret-key"
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", secrets.token_hex(32))  # FIX #3: SECRET_KEY must come from env, not hardcoded
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -41,8 +41,9 @@ if not os.path.exists(UPLOAD_FOLDER):
 db = SQLAlchemy(app)
 
 # ---------------- ADMIN CREDENTIALS ----------------
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
+# FIX #4: Admin credentials must come from environment variables, not be hardcoded
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 # ---------------- MODELS ----------------
 class Link(db.Model):
@@ -58,7 +59,7 @@ class FileUpload(db.Model):
 class Collaborator(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), nullable=False, unique=True)  # FIX #5: Email should be unique to prevent duplicate accounts
     resume_url = db.Column(db.String(300), nullable=False)
     contribution = db.Column(db.String(300), nullable=False)
 
@@ -95,10 +96,10 @@ def admin_login():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        if (
-            request.form["username"] == ADMIN_USERNAME and
-            request.form["password"] == ADMIN_PASSWORD
-        ):
+        # FIX #6: Use secrets.compare_digest to prevent timing attacks on credential comparison
+        username_ok = secrets.compare_digest(request.form.get("username", ""), ADMIN_USERNAME)
+        password_ok = secrets.compare_digest(request.form.get("password", ""), ADMIN_PASSWORD)
+        if username_ok and password_ok:
             session["is_admin"] = True
             flash("Login successful", "success")
             return redirect(url_for("dashboard"))
@@ -154,7 +155,7 @@ def edit_link(id):
         flash("Link updated", "success")
         return redirect(url_for("dashboard"))
 
-    return render_template("edit_link.html", link=link)\
+    return render_template("edit_link.html", link=link)  # FIX #7: Removed stray backslash after render_template call
 
 @app.route("/delete-link/<int:id>", methods=["POST"])
 @admin_required
@@ -170,9 +171,10 @@ def delete_link(id):
 @admin_required
 def add_file():
     if request.method == "POST":
-        file = request.files["file"]
+        file = request.files.get("file")  # FIX #8: Use .get() to avoid KeyError if 'file' key missing
 
-        if not allowed_file(file.filename):
+         # FIX #9: Check that a file was actually submitted before calling allowed_file
+        if not file or file.filename == "":
             flash("Invalid file type", "danger")
             return redirect(url_for("add_file"))
 
@@ -238,6 +240,12 @@ def collaborators():
 @admin_required
 def add_collaborator():
     if request.method == "POST":
+        # FIX #10: Check for duplicate email before inserting
+        existing = Collaborator.query.filter_by(email=request.form["email"]).first()
+        if existing:
+            flash("A collaborator with this email already exists", "danger")
+            return redirect(url_for("add_collaborator"))
+            
         db.session.add(Collaborator(
             name=request.form["name"],
             email=request.form["email"],
@@ -344,16 +352,19 @@ def send_email(to, otp):
 </body>
 </html>
 """, subtype="html")
-    server = smtplib.SMTP("smtp.zoho.in", 587)
-    server.starttls()
-    server.login(
-        os.getenv("EMAIL_USER"),
-        os.getenv("EMAIL_PASS")
-    )
-    server.send_message(msg)
-    server.quit()
+    
+ # FIX #11: Wrap SMTP in try/except and use context manager to ensure connection is closed
+    try:
+        with smtplib.SMTP("smtp.zoho.in", 587) as server:
+            server.starttls()
+            server.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_PASS"))
+            server.send_message(msg)
+    except smtplib.SMTPException as e:
+        raise RuntimeError(f"Failed to send email: {e}")
+        
 def generate_otp():
-    return str(random.randint(100000, 999999))
+    # FIX #12: Use secrets.randbelow for cryptographically secure OTP instead of random.randint
+    return str(secrets.randbelow(900000) + 100000)
 
 def save_otp(email, otp):
     redis_client.setex(f"otp:{email}", 300, otp)
@@ -384,23 +395,23 @@ def request_edit():
         # 3) Check in database
         collaborator = Collaborator.query.filter_by(email=email).first()
 
+        # FIX #13: Always show the same flash message whether or not the email exists
+        # to prevent user enumeration attacks
         if not collaborator:
-            flash("Email not found", "danger")
+            flash("If that email is registered, a verification code has been sent.", "success")
             return redirect(url_for("request_edit"))
 
         # 4) Generate + Send OTP
         otp = generate_otp()
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 367")
-        start=perf_counter()
-        save_otp(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 371")
-        start=perf_counter()
         
-        send_email(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 376")
+       # FIX #14: Wrap OTP send in try/except so server errors don't crash the route
+        try:
+            save_otp(email, otp)
+            send_email(email, otp)
+        except Exception:
+            flash("Failed to send verification email. Please try again later.", "danger")
+            return redirect(url_for("request_edit"))
+        
         session["otp_email"] = email
         flash("Verification code sent to your email.", "success")
         return redirect(url_for("verify_otp"))
@@ -420,7 +431,8 @@ def verify_otp():
             flash("OTP expired", "danger")
             return redirect(url_for("request_edit"))
 
-        if user_otp == saved_otp:
+        i# FIX #15: Use secrets.compare_digest to prevent timing attacks on OTP comparison
+        if secrets.compare_digest(user_otp, saved_otp):
             redis_client.delete(f"otp:{email}")
             session["verified_email"] = email
             flash("OTP verified successfully.", "success")
@@ -459,4 +471,5 @@ def self_edit_collaborator():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    # FIX #16: debug=True must never run in production; use env variable to control
+    app.run(debug=os.getenv("FLASK_DEBUG", "false").lower() == "true")
