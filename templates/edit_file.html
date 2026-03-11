@@ -1,85 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Edit File</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <title>Edit File | Eknal Link</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
 </head>
 
-<body class="min-h-screen flex items-center justify-center
-             bg-gradient-to-b from-blue-50 via-white to-indigo-100
-             text-gray-900 relative overflow-hidden">
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden">
 
-<!-- Background pattern -->
-<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]
-            opacity-10 pointer-events-none"></div>
+  <nav class="sticky top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="flex justify-between items-center h-14">
+        <div class="flex items-center gap-6">
+          <a href="/" class="flex-shrink-0 hover:opacity-80 transition-opacity">
+            <img src="{{ url_for('static', filename='eknal_link.png') }}" alt="Logo" class="h-7">
+          </a>
+          <div class="hidden sm:flex items-center gap-4 text-xs font-semibold uppercase tracking-wider">
+            <a href="{{ url_for('dashboard') }}"
+              class="text-slate-400 hover:text-slate-900 transition-colors">Dashboard</a>
+            <span class="text-slate-200">/</span>
+            <span class="text-slate-900">Edit File</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
 
-<!-- Card -->
-<div class="relative z-10 w-full max-w-md
-            bg-white/80 backdrop-blur
-            rounded-2xl shadow-xl p-8">
+  <main class="flex-grow w-full flex flex-col items-center justify-center px-4 py-10">
 
-  <!-- Title -->
-  <h2 class="text-2xl font-bold text-indigo-700 text-center mb-2">
-    Edit File
-  </h2>
+    <div class="w-full max-w-lg bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
 
-  <p class="text-sm text-gray-600 text-center mb-6">
-    Update your file title below
-  </p>
+      <div class="px-8 pt-8 pb-5 border-b border-slate-50">
+        <h2 class="text-xl font-bold tracking-tight text-slate-900">Edit File</h2>
+        <p class="text-slate-500 text-sm mt-1">Update the metadata for this document asset.</p>
+      </div>
 
-  <!-- Form -->
-  <form method="POST" class="space-y-5">
+      <form method="POST" class="p-8 space-y-5">
 
-    <input
-      type="text"
-      name="title"
-      value="{{ file.title }}"
-      placeholder="File Title"
-      required
-      class="w-full px-4 py-3 rounded-lg border
-             focus:ring-2 focus:ring-indigo-400
-             outline-none text-sm"
-    >
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">Document Title</label>
+          <div class="relative group">
+            <div
+              class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-900 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <input type="text" name="title" value="{{ file.title }}" required autofocus
+              placeholder="Enter the new file title"
+              class="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 text-sm focus:ring-4 focus:ring-slate-100 focus:border-slate-900 outline-none transition-all">
+          </div>
+        </div>
 
-    <button
-      type="submit"
-      class="w-full py-3 rounded-xl font-semibold text-white
-             bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500
-             hover:from-yellow-500 hover:via-orange-500 hover:to-amber-500
-             transition"
-    >
-      Save Changes
-    </button>
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-50">
+          <a href="{{ url_for('dashboard') }}"
+            class="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-900 transition-colors uppercase tracking-widest">
+            Cancel
+          </a>
+          <button type="submit"
+            class="px-6 py-2.5 bg-slate-900 text-white text-[11px] font-bold uppercase tracking-widest rounded-xl shadow-lg shadow-slate-100 hover:bg-slate-800 transform active:scale-95 transition-all">
+            Save Changes
+          </button>
+        </div>
 
-  </form>
+      </form>
+    </div>
 
-  <!-- Back -->
-  <div class="text-center mt-6">
-    <a href="{{ url_for('dashboard') }}"
-       class="text-indigo-600 font-medium hover:underline">
-      Back to Dashboard
-    </a>
-  </div>
+    <div class="mt-6">
+      <a href="{{ url_for('dashboard') }}"
+        class="text-[10px] font-bold text-slate-400 hover:text-slate-900 flex items-center gap-2 transition-colors tracking-widest uppercase">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Back to Dashboard
+      </a>
+    </div>
+  </main>
 
-</div>
-<script>
-const toast = document.getElementById("toast");
+  <footer class="bg-white border-t border-slate-200 py-6">
+    <div
+      class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium tracking-tight">
 
-if (toast) {
-  setTimeout(() => {
-    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
-  }, 100);
+      <div class="flex items-center gap-4">
+        <span class="text-slate-900 font-bold">Eknal Technologies</span>
+        <span class="text-slate-300">|</span>
+        <span class="text-slate-400">&copy; 2026 Internal Portal</span>
+      </div>
 
-  setTimeout(() => {
-    toast.classList.add("opacity-0");
-  }, 2500);
+      <div class="text-slate-400">
+        Developed by
+        <a href="https://www.linkedin.com/in/vaigandladurgesh/" target="_blank" class="text-slate-900 hover:underline">
+          Durgesh Vaigandla (React Developer Intern)
+        </a>
+      </div>
 
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
-}
-</script>
+      <div class="flex gap-4">
+        <a href="https://eknaltechnologies.in" target="_blank"
+          class="text-slate-400 hover:text-slate-900 transition-colors">Official Website</a>
+        <a href="/admin-entry" class="text-slate-400 hover:text-slate-900 transition-colors">Admin Entry</a>
+      </div>
+
+    </div>
+  </footer>
+
+  <script>
+    // Logic for handling toasts
+    const toast = document.getElementById("toast");
+    if (toast) {
+      setTimeout(() => {
+        toast.classList.remove("translate-x-12", "opacity-0");
+      }, 100);
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-x-12");
+      }, 4000);
+    }
+  </script>
+
 </body>
+
 </html>

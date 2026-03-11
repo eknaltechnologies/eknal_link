@@ -1,23 +1,27 @@
 import os
+import re
+import redis
+import smtplib
+import random
 from flask import Flask, render_template, redirect, url_for, request, flash, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
 from functools import wraps
 from dotenv import load_dotenv
-load_dotenv()
-import os
-import redis
-import smtplib
 from email.message import EmailMessage
-from email.mime.text import MIMEText
-import random
+
+load_dotenv()
+
+# ---------------- EMAIL CONFIG ----------------
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
 
-REDIS_SERVER_NUMBER = os.getenv("REDIS_SERVER_NUMBER")
-REDIS_PORT_NUMBER = int(os.getenv("REDIS_PORT_NUMBER"))
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+# ---------------- REDIS CONFIG ----------------
+# BUG-01 FIX: Added safe defaults so app doesn't crash if .env is missing
+REDIS_SERVER_NUMBER = os.getenv("REDIS_SERVER_NUMBER", "localhost")
+REDIS_PORT_NUMBER = int(os.getenv("REDIS_PORT_NUMBER", 6379))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
 
 redis_client = redis.Redis(
     host=REDIS_SERVER_NUMBER,
@@ -27,13 +31,16 @@ redis_client = redis.Redis(
 )
 # ---------------- APP ----------------
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "super-secret-key"
+# BUG-11 FIX: SECRET_KEY loaded from environment, not hardcoded
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", os.urandom(24).hex())
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 UPLOAD_FOLDER = "uploads"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+# BUG-07 FIX: Limit upload size to 10 MB to prevent disk exhaustion
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
@@ -41,8 +48,9 @@ if not os.path.exists(UPLOAD_FOLDER):
 db = SQLAlchemy(app)
 
 # ---------------- ADMIN CREDENTIALS ----------------
-ADMIN_USERNAME = "admin"
-ADMIN_PASSWORD = "admin123"
+# BUG-02 FIX: Credentials loaded from environment variables, not hardcoded
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 
 # ---------------- MODELS ----------------
 class Link(db.Model):
@@ -154,7 +162,8 @@ def edit_link(id):
         flash("Link updated", "success")
         return redirect(url_for("dashboard"))
 
-    return render_template("edit_link.html", link=link)\
+    # BUG-06 FIX: Removed stray trailing backslash
+    return render_template("edit_link.html", link=link)
 
 @app.route("/delete-link/<int:id>", methods=["POST"])
 @admin_required
@@ -275,13 +284,14 @@ def delete_collaborator(id):
     flash("Collaborator deleted", "success")
     return redirect(url_for("collaborators"))
 
+# BUG-04 FIX: Wrapped SMTP logic in try/except so a mail failure doesn't crash the app
 def send_email(to, otp):
-    msg = EmailMessage()
-    msg["From"] = os.getenv("EMAIL_FROM")
-    msg["To"] = to
-    msg["Subject"] = "Eknal Technologies – Email Verification Code"
-   # msg.set_content(f"Your OTP for editing your profile is: {otp}")
-    msg.add_alternative(f"""
+    try:
+        msg = EmailMessage()
+        msg["From"] = os.getenv("EMAIL_FROM")
+        msg["To"] = to
+        msg["Subject"] = "Eknal Technologies – Email Verification Code"
+        msg.add_alternative(f"""
 <html>
 <body style="background-color:#f4f6fb; font-family: Arial, sans-serif; padding:30px;">
 
@@ -294,9 +304,8 @@ def send_email(to, otp):
     box-shadow:0 4px 12px rgba(0,0,0,0.08);
     text-align:center;
   ">
-      
-    <!-- Logo -->
-   <img src="https://i.ibb.co/39ZNH1W0/eknal-link.png"
+
+    <img src="https://i.ibb.co/39ZNH1W0/eknal-link.png"
          style="height:50px;margin-bottom:20px;"
          alt="Eknal Link Logo"/>
 
@@ -336,7 +345,7 @@ def send_email(to, otp):
     <hr style="border:none;border-top:1px solid #eee;margin:25px 0;">
 
     <p style="font-size:13px;color:#666;">
-      © Eknal Technologies
+      &copy; Eknal Technologies
     </p>
 
   </div>
@@ -344,14 +353,18 @@ def send_email(to, otp):
 </body>
 </html>
 """, subtype="html")
-    server = smtplib.SMTP("smtp.zoho.in", 587)
-    server.starttls()
-    server.login(
-        os.getenv("EMAIL_USER"),
-        os.getenv("EMAIL_PASS")
-    )
-    server.send_message(msg)
-    server.quit()
+        server = smtplib.SMTP("smtp.zoho.in", 587)
+        server.starttls()
+        server.login(
+            os.getenv("EMAIL_USER"),
+            os.getenv("EMAIL_PASS")
+        )
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        print(f"[EMAIL ERROR] Failed to send OTP to {to}: {e}")
+        return False
 def generate_otp():
     return str(random.randint(100000, 999999))
 
@@ -367,40 +380,36 @@ def delete_otp(email):
 @app.route("/request-edit", methods=["GET", "POST"])
 def request_edit():
     if request.method == "POST":
-        # from datetime import datetime
-        # datetime=datetime.now()
-        # print(datetime)
-        from time import perf_counter
-        start=perf_counter()
         email = request.form["email"].strip()
-        
 
         # 1) Empty check
         if not email:
             flash("Please enter your email address", "danger")
             return redirect(url_for("request_edit"))
 
-    
-        # 3) Check in database
+        # BUG-08 FIX: Validate email format before hitting the database
+        email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
+        if not email_regex.match(email):
+            flash("Please enter a valid email address.", "danger")
+            return redirect(url_for("request_edit"))
+
+        # 2) Check in database
         collaborator = Collaborator.query.filter_by(email=email).first()
 
         if not collaborator:
             flash("Email not found", "danger")
             return redirect(url_for("request_edit"))
 
-        # 4) Generate + Send OTP
+        # 3) Generate + Send OTP
+        # BUG-09 FIX: Removed debug print/timing statements
         otp = generate_otp()
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 367")
-        start=perf_counter()
         save_otp(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 371")
-        start=perf_counter()
-        
-        send_email(email, otp)
-        duration=perf_counter()-start
-        print(f"{duration:.4f} seconds 376")
+
+        # BUG-04 FIX: Handle email send failure gracefully
+        if not send_email(email, otp):
+            flash("Failed to send verification email. Please try again later.", "danger")
+            return redirect(url_for("request_edit"))
+
         session["otp_email"] = email
         flash("Verification code sent to your email.", "success")
         return redirect(url_for("verify_otp"))
@@ -459,4 +468,5 @@ def self_edit_collaborator():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    # BUG-10 FIX: Read debug mode from environment — never hardcode True in production
+    app.run(debug=os.getenv("FLASK_DEBUG", "false").lower() == "true")

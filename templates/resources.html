@@ -1,152 +1,150 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Eknal Link | Resources</title>
+  <title>Resources | Eknal Link</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
 </head>
 
-<body class="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 via-white to-indigo-100 text-gray-900 relative overflow-x-hidden">
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-900 overflow-x-hidden">
 
-<!-- Background pattern -->
-<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
+  <nav class="sticky top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="flex justify-between items-center h-14">
+        <div class="flex items-center gap-6">
+          <a href="/admin-entry" class="flex-shrink-0 hover:opacity-80 transition-opacity">
+            <img src="{{ url_for('static', filename='eknal_link.png') }}" alt="Logo" class="h-7">
+          </a>
+          <div class="hidden sm:flex items-center gap-4 text-xs font-semibold uppercase tracking-wider">
+            <span class="text-slate-900">Resources</span>
+            <span class="text-slate-200">/</span>
+            <a href="/collaborators" class="text-slate-400 hover:text-slate-900 transition-colors">Collaborators</a>
+          </div>
+        </div>
 
-<!-- Top Bar -->
-<div class="absolute top-0 left-0 w-full flex items-center justify-between
-            px-10 py-4 z-20 border-b border-white/60">
+        <div class="flex items-center">
+          <span
+            class="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-widest rounded-full border border-emerald-100">
+            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+            System Online
+          </span>
+        </div>
+      </div>
+    </div>
+  </nav>
 
-  <!-- Logo (Admin Entry) -->
-  <a href="/admin-entry">
-    <img src="{{ url_for('static', filename='eknal_link.png') }}"
-         alt="Eknal Link Logo"
-         class="h-8 sm:h-12">
-  </a>
-
-  <!-- Navigation -->
-  <a href="/collaborators"
-     class="text-indigo-700 font-semibold
-            border-b-2 border-transparent
-            hover:border-indigo-500 hover:text-indigo-500 transition">
-     Collaborators
-  </a>
-
-</div>
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
+  {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
   {% for category, message in messages %}
   <div id="toast"
-       class="fixed top-6 left-1/2 -translate-x-1/2 z-50
-              px-7 py-3 rounded-xl shadow-xl
-              bg-white/90 backdrop-blur-md
-              text-gray-800 text-sm font-medium
-              border border-gray-200
-              flex items-center gap-3
-              transform scale-95 translate-y-4 opacity-0
-              transition-all duration-500">
-
-      <!-- Accent bar -->
-      <span class="w-1.5 h-6 rounded-full
-            {% if category=='success' %}bg-green-500
-            {% elif category=='danger' %}bg-red-500
-            {% else %}bg-indigo-500{% endif %}">
-      </span>
-
-      <span>{{ message }}</span>
-
+    class="fixed top-20 right-6 z-50 flex items-center p-4 bg-white border border-slate-200 shadow-xl rounded-xl transform transition-all duration-500 translate-x-12 opacity-0">
+    <div class="w-2 h-2 rounded-full mr-3 {% if category=='success' %}bg-emerald-500{% else %}bg-rose-500{% endif %}">
+    </div>
+    <p class="text-sm font-medium text-slate-700">{{ message }}</p>
   </div>
   {% endfor %}
-{% endif %}
-{% endwith %}
-<!-- Main -->
-<div class="flex-grow flex flex-col items-center px-4 pt-24 pb-12 relative z-10 w-full max-w-3xl mx-auto">
+  {% endif %}
+  {% endwith %}
 
-<!-- Header -->
-<header class="text-center mb-6 px-2">
-  <h1 class="text-3xl sm:text-4xl font-bold text-indigo-700 mb-2">
-    Eknal Technologies
-  </h1>
-  <p class="text-gray-600 text-sm sm:text-base">
-    Explore your curated Python & project resources
-  </p>
-</header>
+  <main class="flex-grow w-full max-w-6xl mx-auto px-4 py-8">
 
-<!-- Content -->
-<main class="w-full flex flex-col space-y-4 px-2">
+    <div class="mb-10 border-l-4 border-slate-900 pl-4">
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Engineering Resources</h1>
+      <p class="text-slate-500 text-sm max-w-2xl">Curated Python libraries, project documentation, and technical assets
+        for the Eknal team.</p>
+    </div>
 
-<!-- Links -->
-{% for link in links %}
-<a href="{{ link.url }}" target="_blank"
-   class="block font-semibold text-center py-4 rounded-xl transition
-          transform hover:-translate-y-1 shadow-md
-          text-white bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500
-          hover:from-yellow-500 hover:via-orange-500 hover:to-amber-500 capitalize">
-  {{ link.title }}
-</a>
-{% endfor %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 
-{% if not links %}
-<div class="text-center text-gray-500">
-  No resources available yet.
-</div>
-{% endif %}
+      {% for link in links %}
+      <a href="{{ link.url }}" target="_blank"
+        class="group bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-900 transition-all flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.05)] active:scale-[0.98]">
+        <div class="flex flex-col overflow-hidden">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">External Link</span>
+          <h3 class="text-sm font-bold text-slate-800 group-hover:text-slate-950 truncate capitalize">{{ link.title }}
+          </h3>
+        </div>
+        <div
+          class="flex-shrink-0 ml-4 p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </div>
+      </a>
+      {% endfor %}
 
-<!-- Files -->
-{% for file in files %}
-<a href="{{ url_for('preview_file', id=file.id) }}"
-   target="_blank"
-   class="block transition transform hover:-translate-y-1 shadow-md
-          bg-gradient-to-r from-yellow-500 to-orange-500
-          text-white font-semibold p-4 rounded-2xl
-          hover:from-orange-500 hover:to-yellow-500">
+      {% for file in files %}
+      <a href="{{ url_for('preview_file', id=file.id) }}" target="_blank"
+        class="group bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-900 transition-all flex items-center justify-between shadow-[0_1px_3px_rgba(0,0,0,0.05)] active:scale-[0.98]">
+        <div class="flex flex-col overflow-hidden">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Internal Doc</span>
+          <h3 class="text-sm font-bold text-slate-800 group-hover:text-slate-950 truncate capitalize">{{ file.title }}
+          </h3>
+        </div>
+        <div
+          class="flex-shrink-0 ml-4 p-2 bg-slate-50 rounded-lg text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        </div>
+      </a>
+      {% endfor %}
 
-  <div class="flex flex-col items-center text-center gap-1">
-    <span class="capitalize text-lg">
-      {{ file.title }}
-    </span>
-    <span class="text-xs opacity-90">
-      Preview • Download available
-    </span>
-  </div>
+      {% if not links and not files %}
+      <div class="col-span-full py-16 text-center border-2 border-dashed border-slate-200 rounded-2xl bg-white/50">
+        <p class="text-slate-400 text-sm font-medium">No resources have been published yet.</p>
+      </div>
+      {% endif %}
 
-</a>
-{% endfor %}
-</main>
-</div>
+    </div>
+  </main>
 
-<!-- Footer -->
-<footer class="text-center text-gray-500 text-xs sm:text-sm z-10 py-4 mt-auto border-t border-gray-300 w-full px-4">
-<p>
-  Developed by
-  <a href="https://www.linkedin.com/in/shalem-raj-putta-054388295/"
-     target="_blank"
-     class="text-indigo-600 font-semibold hover:underline">
-    Shalem Raj (Python Intern)
-  </a>
-  at
-  <a href="https://eknaltechnologies.in"
-     target="_blank"
-     class="text-indigo-600 font-semibold hover:underline">
-    Eknal Technologies
-  </a>.
-</p>
-</footer>
-<script>
-const toast = document.getElementById("toast");
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12">
+    <div
+      class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium tracking-tight">
 
-if (toast) {
-  setTimeout(() => {
-    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
-  }, 100);
+      <div class="flex items-center gap-4">
+        <span class="text-slate-900 font-bold">Eknal Technologies</span>
+        <span class="text-slate-300">|</span>
+        <span class="text-slate-400">&copy; 2026 Internal Portal</span>
+      </div>
 
-  setTimeout(() => {
-    toast.classList.add("opacity-0");
-  }, 2500);
+      <div class="text-slate-400">
+        Developed by
+        <a href="https://www.linkedin.com/in/vaigandladurgesh/" target="_blank" class="text-slate-900 hover:underline">
+          Durgesh Vaigandla (React Developer Intern)
+        </a>
+      </div>
 
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
-}
-</script>
+      <div class="flex gap-4">
+        <a href="https://eknaltechnologies.in" target="_blank"
+          class="text-slate-400 hover:text-slate-900 transition-colors">Official Website</a>
+        <a href="/admin-entry" class="text-slate-400 hover:text-slate-900 transition-colors">Admin Entry</a>
+      </div>
+
+    </div>
+  </footer>
+
+  <script>
+    // Logic for handling toasts
+    const toast = document.getElementById("toast");
+    if (toast) {
+      setTimeout(() => toast.classList.remove("translate-x-12", "opacity-0"), 100);
+      setTimeout(() => toast.classList.add("opacity-0", "translate-x-12"), 4000);
+    }
+  </script>
+
 </body>
+
 </html>
