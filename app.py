@@ -84,6 +84,20 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
 if ADMIN_USERNAME == "admin" and ADMIN_PASSWORD == "admin123":
     logger.warning("Using default admin credentials! Change ADMIN_USERNAME and ADMIN_PASSWORD in production.")
 
+# ---------------- CONSTANTS ----------------
+# Template names to avoid duplication
+TEMPLATE_ADD_LINK = "add_link.html"
+TEMPLATE_EDIT_LINK = "edit_link.html"
+TEMPLATE_ADD_FILE = "add_file.html"
+TEMPLATE_ADD_COLLABORATOR = "add_collaborator.html"
+TEMPLATE_EDIT_COLLABORATOR = "edit_collaborator.html"
+TEMPLATE_REQUEST_EDIT = "request_edit.html"
+TEMPLATE_SELF_EDIT = "self_edit.html"
+
+# URL schemes - Security: Only allow HTTPS for better security
+HTTPS_SCHEME = 'https://'
+VALID_SCHEMES = (HTTPS_SCHEME,)  # Only HTTPS allowed for security
+
 # ---------------- DATABASE MODELS ----------------
 class Link(db.Model):
     """Model for storing resource links with validation"""
@@ -131,10 +145,11 @@ def validate_email(email):
     return re.match(pattern, email) is not None
 
 def validate_url(url):
-    """Validate URL format and ensure it has a proper scheme"""
+    """Validate URL format and ensure it uses HTTPS for security"""
     try:
         result = urlparse(url)
-        return all([result.scheme, result.netloc])
+        # Security: Only allow HTTPS URLs
+        return result.scheme == 'https' and result.netloc
     except:
         return False
 
@@ -289,7 +304,7 @@ def edit_link(id):
             flash("Please provide a valid URL.", "danger")
             return render_template(TEMPLATE_EDIT_LINK, link=link)
             
-        # Add http:// if no scheme is provided
+        # Add https:// if no scheme is provided (security: always use HTTPS)
         if not url.startswith(VALID_SCHEMES):
             url = HTTPS_SCHEME + url
             
