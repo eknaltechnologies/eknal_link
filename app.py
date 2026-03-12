@@ -100,6 +100,7 @@ VALID_SCHEMES = (HTTPS_SCHEME,)  # Only HTTPS allowed for security
 
 # Error messages to avoid duplication
 ERROR_UNEXPECTED = "Unexpected error occurred. Please try again."
+ERROR_FILE_ACCESS = "File not found or access denied."
 
 # ---------------- DATABASE MODELS ----------------
 class Link(db.Model):
@@ -262,9 +263,9 @@ def add_link():
             flash("Please provide a valid URL.", "danger")
             return render_template(TEMPLATE_ADD_LINK)
             
-        # Add http:// if no scheme is provided
-        if not url.startswith(('http://', 'https://')):
-            url = 'https://' + url
+        # Add https:// if no scheme is provided (security: always use HTTPS)
+        if not url.startswith(VALID_SCHEMES):
+            url = HTTPS_SCHEME + url
             
         if not validate_url(url):
             flash("Please provide a valid URL format.", "danger")
@@ -469,7 +470,7 @@ def download(id):
         
         # Security check: ensure file exists and is within upload folder
         if not os.path.exists(file_path) or os.path.commonpath([UPLOAD_FOLDER, file_path]) != UPLOAD_FOLDER:
-            flash("File not found or access denied.", "danger")
+            flash(ERROR_FILE_ACCESS, "danger")
             return redirect(url_for("resources"))
             flash("File not found or access denied.", "danger")
             return redirect(url_for("resources"))
@@ -495,7 +496,7 @@ def preview_file(id):
         
         # Security check: ensure file exists and is within upload folder
         if not os.path.exists(file_path) or os.path.commonpath([UPLOAD_FOLDER, file_path]) != UPLOAD_FOLDER:
-            flash("File not found or access denied.", "danger")
+            flash(ERROR_FILE_ACCESS, "danger")
             return redirect(url_for("resources"))
             flash("File not found or access denied.", "danger")
             return redirect(url_for("resources"))
@@ -851,6 +852,42 @@ def request_edit():
             flash("Unable to send verification code. Please try again later.", "danger")
 
     return render_template(TEMPLATE_REQUEST_EDIT)
+def validate_otp_input(user_otp):
+    """Validate OTP input format"""
+    if not user_otp or len(user_otp) != 6 or not user_otp.isdigit():
+        return False, "Please enter a valid 6-digit verification code."
+    return True, None
+
+def check_otp_attempts(email):
+    """Check if too many OTP attempts have been made"""
+    failed_attempts = session.get(f"otp_attempts_{email}", 0)
+    if failed_attempts >= 3:
+        session.pop("otp_email", None)
+        session.pop(f"otp_attempts_{email}", None)
+        return False, "Too many failed attempts. Please request a new verification code."
+    return True, failed_attempts
+
+def handle_otp_success(email):
+    """Handle successful OTP verification"""
+    delete_otp(email)
+    session["verified_email"] = email
+    session.pop("otp_email", None)
+    session.pop(f"otp_attempts_{email}", None)
+    session.pop(f"otp_requested_{email}", None)
+    
+    flash("Email verified successfully! You can now update your profile.", "success")
+    logger.info(f"OTP verified successfully for email: {email}")
+    return redirect(url_for("self_edit_collaborator"))
+
+def handle_otp_failure(email, failed_attempts):
+    """Handle failed OTP verification"""
+    session[f"otp_attempts_{email}"] = failed_attempts + 1
+    remaining_attempts = 3 - (failed_attempts + 1)
+    if remaining_attempts > 0:
+        flash(f"Incorrect verification code. {remaining_attempts} attempts remaining.", "danger")
+    else:
+        flash("Incorrect verification code. Please request a new one.", "danger")
+
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
     """Verify OTP with improved security and user experience"""
@@ -861,17 +898,17 @@ def verify_otp():
         if not email:
             flash("Session expired. Please request a new verification code.", "danger")
             return redirect(url_for("request_edit"))
-            
-        if not user_otp or len(user_otp) != 6 or not user_otp.isdigit():
-            flash("Please enter a valid 6-digit verification code.", "danger")
+        
+        # Validate OTP input
+        is_valid, error_message = validate_otp_input(user_otp)
+        if not is_valid:
+            flash(error_message, "danger")
             return render_template("verify_otp.html")
         
         # Check for too many failed attempts
-        failed_attempts = session.get(f"otp_attempts_{email}", 0)
-        if failed_attempts >= 3:
-            session.pop("otp_email", None)
-            session.pop(f"otp_attempts_{email}", None)
-            flash("Too many failed attempts. Please request a new verification code.", "danger")
+        attempts_ok, failed_attempts = check_otp_attempts(email)
+        if not attempts_ok:
+            flash(failed_attempts, "danger")  # failed_attempts is the error message in this case
             return redirect(url_for("request_edit"))
         
         try:
@@ -882,24 +919,9 @@ def verify_otp():
                 return redirect(url_for("request_edit"))
 
             if user_otp == saved_otp:
-                # Success - clean up and proceed
-                delete_otp(email)
-                session["verified_email"] = email
-                session.pop("otp_email", None)
-                session.pop(f"otp_attempts_{email}", None)
-                session.pop(f"otp_requested_{email}", None)
-                
-                flash("Email verified successfully! You can now update your profile.", "success")
-                logger.info(f"OTP verified successfully for email: {email}")
-                return redirect(url_for("self_edit_collaborator"))
+                return handle_otp_success(email)
             else:
-                # Increment failed attempts
-                session[f"otp_attempts_{email}"] = failed_attempts + 1
-                remaining_attempts = 3 - (failed_attempts + 1)
-                if remaining_attempts > 0:
-                    flash(f"Incorrect verification code. {remaining_attempts} attempts remaining.", "danger")
-                else:
-                    flash("Incorrect verification code. Please request a new one.", "danger")
+                handle_otp_failure(email, failed_attempts)
                     
         except (redis.RedisError, ConnectionError) as e:
             logger.error(f"Error verifying OTP: {str(e)}")
