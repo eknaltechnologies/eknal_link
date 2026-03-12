@@ -5,7 +5,6 @@ from werkzeug.utils import secure_filename
 from functools import wraps
 from dotenv import load_dotenv
 load_dotenv()
-import os
 import redis
 import smtplib
 from email.message import EmailMessage
@@ -27,7 +26,7 @@ redis_client = redis.Redis(
 )
 # ---------------- APP ----------------
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "super-secret-key"
+app.config["SECRET_KEY"] = os.getenv"super-secret-key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -178,6 +177,7 @@ def add_file():
 
         filename = secure_filename(file.filename)
         file.save(os.path.join(UPLOAD_FOLDER, filename))
+        app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
 
         db.session.add(FileUpload(
             title=request.form["title"],
@@ -459,4 +459,4 @@ def self_edit_collaborator():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    app.run()
