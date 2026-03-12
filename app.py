@@ -98,6 +98,9 @@ TEMPLATE_SELF_EDIT = "self_edit.html"
 HTTPS_SCHEME = 'https://'
 VALID_SCHEMES = (HTTPS_SCHEME,)  # Only HTTPS allowed for security
 
+# Error messages to avoid duplication
+ERROR_UNEXPECTED = "Unexpected error occurred. Please try again."
+
 # ---------------- DATABASE MODELS ----------------
 class Link(db.Model):
     """Model for storing resource links with validation"""
@@ -150,7 +153,7 @@ def validate_url(url):
         result = urlparse(url)
         # Security: Only allow HTTPS URLs
         return result.scheme == 'https' and result.netloc
-    except:
+    except (ValueError, TypeError, AttributeError):
         return False
 
 def sanitize_input(text, max_length=None):
@@ -278,10 +281,10 @@ def add_link():
             db.session.rollback()
             flash("Error adding link. Please try again.", "danger")
             logger.error(f"Database error adding link: {str(e)}")
-        except Exception as e:
+        except (OSError, IOError) as e:
             db.session.rollback()
-            flash("Unexpected error occurred. Please try again.", "danger")
-            logger.error(f"Unexpected error adding link: {str(e)}")
+            flash(ERROR_UNEXPECTED, "danger")
+            logger.error(f"System error adding link: {str(e)}")
             
     return render_template(TEMPLATE_ADD_LINK)
 
@@ -323,10 +326,10 @@ def edit_link(id):
             db.session.rollback()
             flash("Error updating link. Please try again.", "danger")
             logger.error(f"Database error updating link: {str(e)}")
-        except Exception as e:
+        except (OSError, IOError) as e:
             db.session.rollback()
-            flash("Unexpected error occurred. Please try again.", "danger")
-            logger.error(f"Unexpected error updating link: {str(e)}")
+            flash(ERROR_UNEXPECTED, "danger")
+            logger.error(f"System error updating link: {str(e)}")
 
     return render_template(TEMPLATE_EDIT_LINK, link=link)
 
@@ -345,14 +348,36 @@ def delete_link(id):
         db.session.rollback()
         flash("Error deleting link. Please try again.", "danger")
         logger.error(f"Database error deleting link: {str(e)}")
-    except Exception as e:
+    except (OSError, IOError) as e:
         db.session.rollback()
-        flash("Unexpected error occurred. Please try again.", "danger")
-        logger.error(f"Unexpected error deleting link: {str(e)}")
+        flash(ERROR_UNEXPECTED, "danger")
+        logger.error(f"System error deleting link: {str(e)}")
     
     return redirect(url_for("dashboard"))
 
 # ---------------- FILES ----------------
+def validate_file_upload(file):
+    """Validate uploaded file and return validation result"""
+    if not file.filename:
+        return False, "No file selected. Please choose a file to upload."
+    
+    if not allowed_file(file.filename):
+        return False, f"Invalid file type. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+    
+    return True, None
+
+def generate_unique_filename(original_filename):
+    """Generate a unique filename to prevent overwrites"""
+    filename = secure_filename(original_filename)
+    counter = 1
+    base_name, extension = os.path.splitext(filename)
+    
+    while os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
+        filename = f"{base_name}_{counter}{extension}"
+        counter += 1
+    
+    return filename
+
 @app.route("/add-file", methods=["GET","POST"])
 @admin_required
 def add_file():
@@ -371,34 +396,23 @@ def add_file():
             
         file = request.files['file']
         
-        if not file.filename:
-            flash("No file selected. Please choose a file to upload.", "danger")
-            return render_template(TEMPLATE_ADD_FILE)
-
-        if not allowed_file(file.filename):
-            flash(f"Invalid file type. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}", "danger")
+        # Validate file
+        is_valid, error_message = validate_file_upload(file)
+        if not is_valid:
+            flash(error_message, "danger")
             return render_template(TEMPLATE_ADD_FILE)
 
         try:
             # Generate secure filename
             original_filename = file.filename
-            filename = secure_filename(original_filename)
-            
-            # Ensure filename is unique to prevent overwrites
-            counter = 1
-            base_name, extension = os.path.splitext(filename)
-            while os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
-                filename = f"{base_name}_{counter}{extension}"
-                counter += 1
+            filename = generate_unique_filename(original_filename)
             
             # Save file
             file_path = os.path.join(UPLOAD_FOLDER, filename)
             file.save(file_path)
             
-            # Get file size
+            # Get file size and save to database
             file_size = os.path.getsize(file_path)
-            
-            # Save to database
             new_file = FileUpload(
                 title=title,
                 filename=filename,
@@ -412,7 +426,7 @@ def add_file():
             logger.info(f"File uploaded: {title} ({filename})")
             return redirect(url_for("dashboard"))
             
-        except Exception as e:
+        except (SQLAlchemyError, IntegrityError, OSError, IOError) as e:
             db.session.rollback()
             # Clean up file if database save failed
             if 'file_path' in locals() and os.path.exists(file_path):
@@ -440,7 +454,7 @@ def edit_file(id):
             flash(f"File '{title}' updated successfully!", "success")
             logger.info(f"File metadata updated: {title}")
             return redirect(url_for("dashboard"))
-        except Exception as e:
+        except (SQLAlchemyError, IntegrityError) as e:
             db.session.rollback()
             flash("Error updating file. Please try again.", "danger")
             logger.error(f"Error updating file: {str(e)}")
@@ -454,7 +468,9 @@ def download(id):
         file_path = os.path.join(UPLOAD_FOLDER, file_upload.filename)
         
         # Security check: ensure file exists and is within upload folder
-        if not os.path.exists(file_path) or not os.path.commonpath([UPLOAD_FOLDER, file_path]) == UPLOAD_FOLDER:
+        if not os.path.exists(file_path) or os.path.commonpath([UPLOAD_FOLDER, file_path]) != UPLOAD_FOLDER:
+            flash("File not found or access denied.", "danger")
+            return redirect(url_for("resources"))
             flash("File not found or access denied.", "danger")
             return redirect(url_for("resources"))
             
@@ -465,7 +481,7 @@ def download(id):
             as_attachment=True,
             download_name=file_upload.original_filename  # Use original filename for download
         )
-    except Exception as e:
+    except (OSError, IOError, FileNotFoundError) as e:
         logger.error(f"Error downloading file: {str(e)}")
         flash("Error downloading file.", "danger")
         return redirect(url_for("resources"))
@@ -478,7 +494,9 @@ def preview_file(id):
         file_path = os.path.join(UPLOAD_FOLDER, file_upload.filename)
         
         # Security check: ensure file exists and is within upload folder
-        if not os.path.exists(file_path) or not os.path.commonpath([UPLOAD_FOLDER, file_path]) == UPLOAD_FOLDER:
+        if not os.path.exists(file_path) or os.path.commonpath([UPLOAD_FOLDER, file_path]) != UPLOAD_FOLDER:
+            flash("File not found or access denied.", "danger")
+            return redirect(url_for("resources"))
             flash("File not found or access denied.", "danger")
             return redirect(url_for("resources"))
             
@@ -487,7 +505,7 @@ def preview_file(id):
             file_upload.filename,
             as_attachment=False
         )
-    except Exception as e:
+    except (OSError, IOError, FileNotFoundError) as e:
         logger.error(f"Error previewing file: {str(e)}")
         flash("Error previewing file.", "danger")
         return redirect(url_for("resources"))
@@ -512,7 +530,7 @@ def delete_file(id):
         flash(f"File '{file_title}' deleted successfully.", "success")
         logger.info(f"File deleted: {file_title}")
         
-    except Exception as e:
+    except (SQLAlchemyError, IntegrityError, OSError, IOError) as e:
         db.session.rollback()
         flash("Error deleting file. Please try again.", "danger")
         logger.error(f"Error deleting file: {str(e)}")
@@ -586,7 +604,7 @@ def add_collaborator():
             flash(f"Collaborator '{name}' added successfully!", "success")
             logger.info(f"New collaborator added: {name} ({email})")
             return redirect(url_for("collaborators"))
-        except Exception as e:
+        except (SQLAlchemyError, IntegrityError) as e:
             db.session.rollback()
             flash("Error adding collaborator. Please try again.", "danger")
             logger.error(f"Error adding collaborator: {str(e)}")
@@ -631,7 +649,7 @@ def edit_collaborator(id):
             flash(f"Collaborator '{name}' updated successfully!", "success")
             logger.info(f"Collaborator updated: {name} ({email})")
             return redirect(url_for("collaborators"))
-        except Exception as e:
+        except (SQLAlchemyError, IntegrityError) as e:
             db.session.rollback()
             flash("Error updating collaborator. Please try again.", "danger")
             logger.error(f"Error updating collaborator: {str(e)}")
@@ -737,8 +755,8 @@ def send_email(to, otp):
     except smtplib.SMTPException as e:
         logger.error(f"SMTP error: {str(e)}")
         raise Exception("Failed to send email")
-    except Exception as e:
-        logger.error(f"Unexpected error sending email: {str(e)}")
+    except (ConnectionError, TimeoutError, OSError) as e:
+        logger.error(f"Network/system error sending email: {str(e)}")
         raise Exception("Email service temporarily unavailable")
 
 def generate_otp():
@@ -790,7 +808,7 @@ def process_otp_request(email):
         
         logger.info(f"OTP requested for email: {email}")
         return True
-    except Exception as e:
+    except (smtplib.SMTPException, ConnectionError, OSError) as e:
         logger.error(f"Error in OTP request process: {str(e)}")
         return False
 
@@ -883,7 +901,7 @@ def verify_otp():
                 else:
                     flash("Incorrect verification code. Please request a new one.", "danger")
                     
-        except Exception as e:
+        except (redis.RedisError, ConnectionError) as e:
             logger.error(f"Error verifying OTP: {str(e)}")
             flash("Error verifying code. Please try again.", "danger")
 
@@ -951,7 +969,7 @@ def self_edit_collaborator():
             logger.info(f"Collaborator self-updated profile: {name} ({email})")
             return redirect(url_for("collaborators"))
             
-        except Exception as e:
+        except (SQLAlchemyError, IntegrityError) as e:
             db.session.rollback()
             flash("Error updating profile. Please try again.", "danger")
             logger.error(f"Error in self-edit: {str(e)}")
@@ -984,7 +1002,7 @@ def create_tables():
         with app.app_context():
             db.create_all()
             logger.info("Database tables created successfully")
-    except Exception as e:
+    except (SQLAlchemyError, OSError) as e:
         logger.error(f"Error creating database tables: {str(e)}")
 
 if __name__ == "__main__":
