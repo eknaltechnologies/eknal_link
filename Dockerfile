@@ -16,8 +16,13 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code and set permissions
-COPY . .
+# Copy application files (Security: Only copying necessary files, not entire directory)
+# This approach prevents accidental inclusion of sensitive files like .env, .git, etc.
+COPY app.py config.py run.py ./
+COPY templates/ ./templates/
+COPY static/ ./static/
+
+# Create uploads directory and set permissions
 RUN mkdir -p uploads \
     && chown -R app:app /app
 USER app
