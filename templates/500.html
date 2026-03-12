@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Server Error | Eknal Technologies</title>
+  <!-- Using specific Tailwind CSS version with integrity check for security -->
+  <link href="https://unpkg.com/tailwindcss@3.3.0/dist/tailwind.min.css" 
+        rel="stylesheet" 
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" 
+        crossorigin="anonymous">
+</head>
+
+<body class="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 via-white to-indigo-100">
+
+<!-- Background pattern -->
+<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
+
+<!-- Error Card -->
+<div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md text-center relative z-10">
+  
+  <!-- Logo -->
+  <img src="{{ url_for('static', filename='eknal_link.png') }}" 
+       alt="Eknal Link Logo" 
+       class="h-12 mx-auto mb-6">
+  
+  <!-- Error Message -->
+  <div class="text-6xl font-bold text-red-500 mb-4">500</div>
+  <h1 class="text-2xl font-semibold text-gray-800 mb-4">Server Error</h1>
+  <p class="text-gray-600 mb-8">
+    Something went wrong on our end. Please try again in a few moments.
+  </p>
+  
+  <!-- Action Buttons -->
+  <div class="space-y-3">
+    <a href="{{ url_for('resources') }}" 
+       class="block w-full py-3 px-4 bg-gradient-to-r from-orange-500 to-yellow-500 
+              text-white font-semibold rounded-lg hover:from-yellow-500 hover:to-orange-500 
+              transition duration-200">
+      Go to Home
+    </a>
+    
+    <button onclick="window.location.reload()" 
+            class="block w-full py-3 px-4 border border-gray-300 text-gray-600 
+                   font-semibold rounded-lg hover:bg-gray-50 transition duration-200">
+      Try Again
+    </button>
+  </div>
+  
+</div>
+
+</body>
+</html>
