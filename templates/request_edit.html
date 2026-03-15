@@ -1,20 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Request Profile Edit{% endblock %}
 
-{% block nav_links %}
-<a href="{{ url_for('resources') }}"
-   class="text-indigo-700 hover:text-indigo-500 border-b-2 border-transparent hover:border-indigo-400 transition pb-0.5">
-  Home
-</a>
-<a href="{{ url_for('collaborators') }}"
-   class="text-indigo-700 hover:text-indigo-500 border-b-2 border-transparent hover:border-indigo-400 transition pb-0.5">
-  Collaborators
-</a>
-{% endblock %}
-{% block nav_links_mobile %}
-<a href="{{ url_for('resources') }}" class="text-indigo-700">Home</a>
-<a href="{{ url_for('collaborators') }}" class="text-indigo-700">Collaborators</a>
-{% endblock %}
 
 {% block content %}
 <div class="flex-grow flex items-center justify-center px-4 pt-28 pb-12 relative z-10">

@@ -4,21 +4,6 @@
 {% block body_class %}min-h-screen flex flex-col bg-slate-50 text-slate-800{% endblock %}
 {% block bg_pattern %}{% endblock %}
 
-{% block topbar %}
-<header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-20">
-  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <img src="{{ url_for('static', filename='eknal_link.png') }}" class="h-8" alt="Eknal Link">
-    </div>
-    <nav class="flex items-center gap-6 text-sm font-medium">
-      <a href="{{ url_for('resources') }}" class="text-slate-600 hover:text-indigo-600 transition">Resources</a>
-      <a href="{{ url_for('collaborators') }}" class="text-slate-600 hover:text-indigo-600 transition">Collaborators</a>
-      <a href="{{ url_for('admin_logout') }}" class="text-slate-600 hover:text-red-600 transition">Logout</a>
-    </nav>
-  </div>
-</header>
-{% endblock %}
-
 {% block content %}
 <main class="max-w-7xl mx-auto px-6 py-10 flex-grow">
 
@@ -170,17 +155,6 @@
 </main>
 {% endblock %}
 
-{% block footer %}
-<footer class="bg-white border-t border-slate-200 text-center text-slate-400 text-xs py-4 px-4">
-  <p>
-    Developed by
-    <a href="https://www.linkedin.com/in/shalem-raj-putta-054388295/" target="_blank"
-       class="text-indigo-500 font-semibold hover:underline">Shalem Raj</a>
-    at
-    <a href="https://eknaltechnologies.in" target="_blank"
-       class="text-indigo-500 font-semibold hover:underline">Eknal Technologies</a>.
-  </p>
-</footer>
 {% endblock %}
 
 {% block extra_scripts %}

@@ -1,20 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Edit Link{% endblock %}
 
-{% block body_class %}min-h-screen flex flex-col bg-gradient-to-b from-blue-50 via-white to-indigo-100 text-gray-900 relative overflow-x-hidden{% endblock %}
-
-{% block topbar %}
-<nav class="absolute top-0 left-0 w-full z-20 border-b border-white/40">
-  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-    <img src="{{ url_for('static', filename='eknal_link.png') }}" alt="Eknal Link" class="h-9 sm:h-11">
-    <a href="{{ url_for('dashboard') }}"
-       class="text-sm font-semibold text-indigo-700 hover:text-indigo-500 transition">
-      ← Dashboard
-    </a>
-  </div>
-</nav>
-{% endblock %}
-
 {% block content %}
 <div class="flex-grow flex items-center justify-center px-4 pt-28 pb-12 relative z-10">
   <div class="bg-white/85 backdrop-blur rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/60">

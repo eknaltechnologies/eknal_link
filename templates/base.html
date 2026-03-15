@@ -69,6 +69,13 @@
            alt="Eknal Link" class="h-9 sm:h-11">
     </a>
 
+    <!-- Dashboard Link for Admin Pages (Reduces Duplication) -->
+    {% if request.endpoint in ['add_link', 'edit_link', 'add_file', 'edit_file', 'add_collaborator', 'edit_collaborator'] %}
+    <a href="{{ url_for('dashboard') }}"
+       class="text-sm font-semibold text-indigo-700 hover:text-indigo-500 transition">
+      ← Dashboard
+    </a>
+    {% else %}
     <!-- Desktop Nav -->
     <div class="hidden sm:flex items-center gap-6 text-sm font-semibold">
       {% block nav_links %}
@@ -89,15 +96,18 @@
       <span class="block w-6 h-0.5 bg-indigo-700 transition-all"></span>
       <span class="block w-6 h-0.5 bg-indigo-700 transition-all"></span>
     </button>
+    {% endif %}
   </div>
 
   <!-- Mobile Menu -->
+  {% if not request.endpoint in ['add_link', 'edit_link', 'add_file', 'edit_file', 'add_collaborator', 'edit_collaborator'] %}
   <div id="mobile-menu" class="hidden sm:hidden bg-white/95 backdrop-blur border-t border-gray-100 px-6 py-4 flex flex-col gap-4 text-sm font-semibold">
     {% block nav_links_mobile %}
     <a href="{{ url_for('resources') }}" class="text-indigo-700 hover:text-indigo-500">Resources</a>
     <a href="{{ url_for('collaborators') }}" class="text-indigo-700 hover:text-indigo-500">Collaborators</a>
     {% endblock %}
   </div>
+  {% endif %}
 </nav>
 {% endblock %}
 

@@ -2,8 +2,8 @@ import os
 import re
 import redis
 import smtplib
-import random
-import logging
+import secrets
+from email_validator import validate_email, EmailNotValidError
 from email.message import EmailMessage
 from functools import wraps
 
@@ -77,8 +77,13 @@ limiter = Limiter(
     storage_uri="memory://"
 )
 
-# ── Email regex ──────────────────────────────────────────────────────────────────
-EMAIL_REGEX = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+# ── Email validation ─────────────────────────────────────────────────────────────
+def is_valid_email(email):
+    try:
+        validate_email(email, check_deliverability=False)
+        return True
+    except EmailNotValidError:
+        return False
 
 # ── Models ───────────────────────────────────────────────────────────────────────
 class Link(db.Model):
@@ -335,7 +340,8 @@ def send_email(to, otp):
         server.send_message(msg)
 
 def generate_otp():
-    return str(random.randint(100000, 999999))
+    """Generate a cryptographically secure 6-digit OTP."""
+    return "".join([str(secrets.randbelow(10)) for _ in range(6)])
 
 def save_otp(email, otp):
     try:
@@ -370,7 +376,7 @@ def request_edit():
             flash("Please enter your email address.", "danger")
             return redirect(url_for("request_edit"))
 
-        if not EMAIL_REGEX.match(email):
+        if not is_valid_email(email):
             flash("Please enter a valid email address.", "danger")
             return redirect(url_for("request_edit"))
 
