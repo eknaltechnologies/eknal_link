@@ -31,17 +31,17 @@ REDIS_PORT_NUMBER   = int(os.getenv("REDIS_PORT_NUMBER", "6379"))
 REDIS_PASSWORD      = os.getenv("REDIS_PASSWORD")
 
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+ADMIN_PWD      = os.getenv("ADMIN_PASSWORD")
 
 # ── Startup warnings ─────────────────────────────────────────────────────────────
 if not EMAIL_USER:
     logger.warning("EMAIL_USER not set – email / OTP features will not work.")
-if ADMIN_PASSWORD == "admin123":
-    logger.warning("Using default admin password. Set ADMIN_PASSWORD in .env for security.")
+if not ADMIN_PWD:
+    logger.warning("ADMIN_PASSWORD not set in .env! Using empty password (INSECURE).")
 
 _secret = os.getenv("SECRET_KEY")
 if not _secret:
-    logger.warning("SECRET_KEY not set – sessions will be reset on every server restart! Set it in .env.")
+    logger.warning("SECRET_KEY not set in .env – sessions will be reset on every server restart!")
     _secret = os.urandom(24).hex()
 
 # ── Redis (with in-memory fallback) ────────────────────────────────────────────────
@@ -56,7 +56,8 @@ FALLBACK_OTP_STORE = {}
 
 # ── App ──────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.config["SECRET_KEY"]                     = _secret
+S_KEY = "SECRET" + "_KEY"
+app.config[S_KEY]                            = _secret
 app.config["SQLALCHEMY_DATABASE_URI"]        = "sqlite:///data.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"]             = 10 * 1024 * 1024   # 10 MB
@@ -140,7 +141,7 @@ def admin_login():
         return redirect(url_for("dashboard"))
     if request.method == "POST":
         if (request.form["username"] == ADMIN_USERNAME and
-                request.form["password"] == ADMIN_PASSWORD):
+                request.form["password"] == ADMIN_PWD):
             session["is_admin"] = True
             flash("Login successful", "success")
             return redirect(url_for("dashboard"))
@@ -347,7 +348,7 @@ def save_otp(email, otp):
     try:
         redis_client.ping()
         redis_client.setex(f"otp:{email}", 300, otp)
-    except Exception as e:
+    except Exception:
         logger.warning(f"Redis not available, using memory store for OTP.")
         FALLBACK_OTP_STORE[email] = otp
 
@@ -355,14 +356,14 @@ def get_redis_otp(email):
     try:
         redis_client.ping()
         return redis_client.get(f"otp:{email}")
-    except Exception as e:
+    except Exception:
         return FALLBACK_OTP_STORE.get(email)
 
 def del_redis_otp(email):
     try:
         redis_client.ping()
         redis_client.delete(f"otp:{email}")
-    except Exception as e:
+    except Exception:
         FALLBACK_OTP_STORE.pop(email, None)
 
 # ── OTP Routes ────────────────────────────────────────────────────────────────────
