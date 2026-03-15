@@ -1,89 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Admin Login</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% extends "base.html" %}
+{% block title %}Admin Login{% endblock %}
 
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
+{% block topbar %}
+<nav class="absolute top-0 left-0 w-full z-20 border-b border-white/40">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="{{ url_for('resources') }}" class="shrink-0">
+      <img src="{{ url_for('static', filename='eknal_link.png') }}" alt="Eknal Link" class="h-9 sm:h-11">
+    </a>
+    <a href="{{ url_for('resources') }}"
+       class="text-sm font-semibold text-indigo-700 hover:text-indigo-500 transition">
+      ← Back to Resources
+    </a>
+  </div>
+</nav>
+{% endblock %}
 
-<body class="min-h-screen flex items-center justify-center
-             bg-gradient-to-b from-blue-50 via-white to-indigo-100">
+{% block content %}
+<div class="flex-grow flex items-center justify-center px-4 pt-24 pb-12 relative z-10">
+  <div class="bg-white/85 backdrop-blur p-8 rounded-2xl shadow-2xl w-full max-w-sm border border-white/60">
 
-<!-- Background pattern -->
-<div class="absolute inset-0
-     bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]
-     opacity-10 pointer-events-none"></div>
-
-<!-- Card -->
-<div class="bg-white/80 backdrop-blur
-            p-8 rounded-2xl shadow-xl
-            w-full max-w-sm relative z-10">
-
-  <h2 class="text-2xl font-bold text-indigo-700 text-center mb-6">
-    Admin Login
-  </h2>
-
-  <!-- Flash Messages -->
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="mb-4 px-4 py-2 rounded
-                    {% if category == 'success' %}
-                      bg-green-100 text-green-700
-                    {% else %}
-                      bg-red-100 text-red-700
-                    {% endif %}">
-          {{ message }}
-        </div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
-
-  <form method="post" class="space-y-4">
-
-    <div>
-      <label class="block text-sm font-medium mb-1">Username</label>
-      <input type="text" name="username" required
-             class="w-full border px-3 py-2 rounded-lg
-                    focus:ring-2 focus:ring-indigo-400 outline-none">
+    <div class="text-center mb-7">
+      <div class="w-14 h-14 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-7 h-7 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-indigo-700">Admin Login</h2>
+      <p class="text-gray-500 text-sm mt-1">Sign in to manage your workspace</p>
     </div>
 
-    <div>
-      <label class="block text-sm font-medium mb-1">Password</label>
-      <input type="password" name="password" required
-             class="w-full border px-3 py-2 rounded-lg
-                    focus:ring-2 focus:ring-indigo-400 outline-none">
-    </div>
+    <form method="post" autocomplete="off" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <button type="submit"
-            class="w-full py-2 rounded-lg text-white font-semibold
-                   bg-gradient-to-r from-orange-500 to-yellow-500
-                   hover:from-yellow-500 hover:to-orange-500">
-      Login
-    </button>
+      <div>
+        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+        <input type="text" name="username" id="username" required autofocus
+               autocomplete="off"
+               class="w-full border border-gray-200 px-4 py-2.5 rounded-xl text-sm
+                      focus:ring-2 focus:ring-indigo-400 outline-none transition">
+      </div>
 
-  </form>
+      <div>
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+        <input type="password" name="password" id="password" required
+               autocomplete="new-password"
+               class="w-full border border-gray-200 px-4 py-2.5 rounded-xl text-sm
+                      focus:ring-2 focus:ring-indigo-400 outline-none transition">
+      </div>
 
+      <button type="submit"
+              class="w-full py-2.5 rounded-xl text-white font-semibold shadow
+                     bg-gradient-to-r from-orange-500 to-yellow-500
+                     hover:from-yellow-500 hover:to-orange-500 transition">
+        Sign In
+      </button>
+    </form>
+
+  </div>
 </div>
-<script>
-const toast = document.getElementById("toast");
-
-if (toast) {
-  setTimeout(() => {
-    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
-  }, 100);
-
-  setTimeout(() => {
-    toast.classList.add("opacity-0");
-  }, 2500);
-
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
-}
-</script>
-</body>
-</html>
+{% endblock %}
