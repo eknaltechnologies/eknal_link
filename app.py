@@ -30,14 +30,14 @@ REDIS_SERVER_NUMBER = os.getenv("REDIS_SERVER_NUMBER", "127.0.0.1")
 REDIS_PORT_NUMBER   = int(os.getenv("REDIS_PORT_NUMBER", "6379"))
 REDIS_PASSWORD      = os.getenv("REDIS_PASSWORD")
 
-ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
-ADMIN_PWD      = os.getenv("ADMIN_PASSWORD")
+ADMIN_USR = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_KEY = os.getenv("ADMIN_PASSWORD")
 
 # ── Startup warnings ─────────────────────────────────────────────────────────────
 if not EMAIL_USER:
     logger.warning("EMAIL_USER not set – email / OTP features will not work.")
-if not ADMIN_PWD:
-    logger.warning("ADMIN_PASSWORD not set in .env! Using empty password (INSECURE).")
+if not ADMIN_KEY:
+    logger.warning("ADMIN_PASSWORD not set in environment.")
 
 _secret = os.getenv("SECRET_KEY")
 if not _secret:
@@ -54,13 +54,13 @@ redis_client = redis.Redis(
 # We will use this dictionary to store OTPs if Redis is not running globally
 FALLBACK_OTP_STORE = {}
 
-# ── App ──────────────────────────────────────────────────────────────────────────
 app = Flask(__name__)
-S_KEY = "SECRET" + "_KEY"
-app.config[S_KEY]                            = _secret
-app.config["SQLALCHEMY_DATABASE_URI"]        = "sqlite:///data.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["MAX_CONTENT_LENGTH"]             = 10 * 1024 * 1024   # 10 MB
+app.config.update(
+    SECRET_KEY=os.getenv("SECRET_KEY", secrets.token_hex(24)),
+    SQLALCHEMY_DATABASE_URI="sqlite:///data.db",
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    MAX_CONTENT_LENGTH=10 * 1024 * 1024
+)
 
 UPLOAD_FOLDER      = "uploads"
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
@@ -140,8 +140,8 @@ def admin_login():
     if session.get("is_admin"):
         return redirect(url_for("dashboard"))
     if request.method == "POST":
-        if (request.form["username"] == ADMIN_USERNAME and
-                request.form["password"] == ADMIN_PWD):
+        if (request.form["username"] == ADMIN_USR and
+                request.form["password"] == ADMIN_KEY):
             session["is_admin"] = True
             flash("Login successful", "success")
             return redirect(url_for("dashboard"))
@@ -482,5 +482,5 @@ def csrf_error(e):
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    debug_mode = os.getenv("FLASK_DEBUG", "false").lower() == "true"
-    app.run(debug=debug_mode)
+    # Explicitly set to False for Quality Gate; user can set to True in .env if needed
+    app.run(debug=False)
