@@ -349,7 +349,7 @@ def save_otp(email, otp):
         redis_client.ping()
         redis_client.setex(f"otp:{email}", 300, otp)
     except Exception:
-        logger.warning(f"Redis not available, using memory store for OTP.")
+        logger.warning("Redis not available, using memory store for OTP.")
         FALLBACK_OTP_STORE[email] = otp
 
 def get_redis_otp(email):
