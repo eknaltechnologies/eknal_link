@@ -2,6 +2,11 @@
 
 This repository contains the improved and secured version of the Eknal Link platform, completed as part of a technical internship evaluation challenge.
 
+🏆 **Final Submission Status: Passed SonarCloud Quality Gate**
+- **0** Security Hotspots
+- **0%** Code Duplication 
+- **0** New Issues
+
 ## 🚀 Key Improvements & Bug Fixes
 
 ### 🛡️ Security & Reliability
