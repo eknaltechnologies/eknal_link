@@ -3,6 +3,7 @@ import re
 import redis
 import smtplib
 import secrets
+import logging
 from email_validator import validate_email, EmailNotValidError
 from email.message import EmailMessage
 from functools import wraps
