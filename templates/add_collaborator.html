@@ -1,111 +1,63 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Eknal Link | New Collaborator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% extends "base.html" %}
+{% block title %}Add Collaborator{% endblock %}
 
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
+{% block body_class %}min-h-screen flex flex-col bg-gradient-to-b from-blue-50 via-white to-indigo-100 text-gray-900 relative overflow-x-hidden{% endblock %}
 
-<body class="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 via-white to-indigo-100 text-gray-900 relative overflow-x-hidden">
+{% block content %}
+<div class="flex-grow flex items-center justify-center px-4 pt-28 pb-12 relative z-10">
+  <div class="bg-white/85 backdrop-blur rounded-2xl shadow-2xl p-8 w-full max-w-md border border-white/60">
 
-<!-- Background Pattern -->
-<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
+    <h2 class="text-2xl font-bold text-indigo-700 text-center mb-6">New Collaborator</h2>
 
-<!-- Logo -->
-<div class="absolute top-4 left-4 z-20">
-  <img src="{{ url_for('static', filename='eknal_link.png') }}"
-       class="h-8 sm:h-12">
+    <form method="post" class="space-y-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div>
+        <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+        <input type="text" name="name" id="name" required autofocus
+               placeholder="Enter full name"
+               class="w-full border border-gray-200 px-4 py-2.5 rounded-xl text-sm
+                      focus:ring-2 focus:ring-indigo-400 outline-none transition">
+      </div>
+
+      <div>
+        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+        <input type="email" name="email" id="email" required
+               placeholder="example@email.com"
+               class="w-full border border-gray-200 px-4 py-2.5 rounded-xl text-sm
+                      focus:ring-2 focus:ring-indigo-400 outline-none transition">
+      </div>
+
+      <div>
+        <label for="resume" class="block text-sm font-medium text-gray-700 mb-1">Resume URL</label>
+        <input type="url" name="resume" id="resume" required
+               placeholder="https://drive.google.com/..."
+               class="w-full border border-gray-200 px-4 py-2.5 rounded-xl text-sm
+                      focus:ring-2 focus:ring-indigo-400 outline-none transition">
+      </div>
+
+      <div>
+        <label for="contribution" class="block text-sm font-medium text-gray-700 mb-1">Contribution</label>
+        <input type="text" name="contribution" id="contribution" required
+               placeholder="Worked on backend, UI, database..."
+               class="w-full border border-gray-200 px-4 py-2.5 rounded-xl text-sm
+                      focus:ring-2 focus:ring-indigo-400 outline-none transition">
+      </div>
+
+      <div class="flex gap-3 pt-1">
+        <a href="{{ url_for('collaborators') }}"
+           class="flex-1 py-2.5 rounded-xl text-center font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition text-sm">
+          Cancel
+        </a>
+        <button type="submit"
+                class="flex-1 py-2.5 rounded-xl font-semibold text-white shadow
+                       bg-gradient-to-r from-orange-500 to-yellow-500
+                       hover:from-yellow-500 hover:to-orange-500 transition text-sm">
+          Add Collaborator
+        </button>
+      </div>
+    </form>
+
+  </div>
 </div>
-
-<!-- Main Content -->
-<div class="flex-grow flex items-center justify-center px-4 pt-24 pb-12 relative z-10">
-
-<div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md">
-
-<h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">
-New Collaborator
-</h2>
-
-<form method="post" class="space-y-4" id="collabForm">
-
-<!-- Name -->
-<div>
-<label class="block text-sm mb-1">Name</label>
-<input type="text" name="name" required autofocus
-       placeholder="Enter full name"
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
-
-<!-- Email -->
-<div>
-<label class="block text-sm mb-1">Email</label>
-<input type="email" name="email" required
-       placeholder="example@email.com"
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
-
-<!-- Resume -->
-<div>
-<label class="block text-sm mb-1">Resume URL</label>
-<input type="url" name="resume" required
-       placeholder="https://drive.google.com/..."
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
-
-<!-- Contribution -->
-<div>
-<label class="block text-sm mb-1">Contribution</label>
-<input type="text" name="contribution" required
-       placeholder="Worked on backend, UI, database..."
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
-
-<hr class="my-4">
-
-<!-- Actions -->
-<div class="flex justify-end gap-3">
-
-<a href="/collaborators"
-   class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
-Back
-</a>
-
-<button type="submit"
-        class="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500
-               text-white rounded-lg font-semibold">
-New Collaborator
-</button>
-
-</div>
-
-</form>
-
-</div>
-
-</div>
-
-<!-- Footer -->
-<footer class="text-center text-gray-500 text-xs sm:text-sm z-10 py-4 mt-auto border-t border-gray-300 w-full px-4">
-<p>
-  Developed by
-  <a href="https://www.linkedin.com/in/shalem-raj-putta-054388295/"
-     target="_blank"
-     class="text-indigo-600 font-semibold hover:underline">
-    Shalem Raj (Python Intern)
-  </a>
-  at
-  <a href="https://eknaltechnologies.in"
-     target="_blank"
-     class="text-indigo-600 font-semibold hover:underline">
-    Eknal Technologies
-  </a>.
-</p>
-</footer>
-</body>
-</html>
+{% endblock %}
