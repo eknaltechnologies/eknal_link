@@ -420,6 +420,25 @@ def verify_otp():
         flash("Incorrect OTP. Please try again.", "danger")
 
     return render_template("verify_otp.html")
+# Resend OTP Router
+@app.route("/resend-otp", methods=["POST"])
+def resend_otp():
+    email = session.get("otp_email")
+    if not email:
+        return {"success": False, "message": "Session expired. Please request again."}, 400
+    
+    collaborator = Collaborator.query.filter_by(email=email).first()
+    if not collaborator:
+        return {"success": False, "message": "Email not found"}, 400
+
+    otp = generate_otp()
+    save_otp(email, otp)
+    try:
+        send_email(email, otp)
+        return {"success": True, "message": "A new verification code has been sent."}
+    except Exception as e:
+        return {"success": False, "message": "Failed to send email. Please try again later."}, 500
+
 #edit
 @app.route("/self-edit", methods=["GET", "POST"])
 def self_edit_collaborator():
