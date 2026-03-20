@@ -103,6 +103,60 @@
                required>
       </div>
 
+
+    <div>
+<label class="block text-sm mb-1">Contribution Type</label>
+
+<select name="contribution_type"
+        class="w-full border px-3 py-2 rounded-lg
+               focus:ring-2 focus:ring-indigo-400 outline-none">
+
+{% for t in types %}
+
+<option value="{{ t.id }}"
+{% if collaborator.contribution_type_id == t.id %}selected{% endif %}>
+{{ t.name }}
+</option>
+
+{% endfor %}
+
+</select>
+</div>
+
+     <!-- LinkedIn -->
+      <div>
+        <label class="block text-sm font-medium mb-1">LinkedIn</label>
+        <input type="url"
+               name="linkedin"
+               value="{{ collaborator.linkedin }}"
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg
+                      focus:ring-2 focus:ring-indigo-400 outline-none"
+               required>
+      </div>
+      
+      <!-- GitHub -->
+      <div>
+        <label class="block text-sm font-medium mb-1">GitHub</label>
+        <input type="url"
+               name="github"
+               value="{{ collaborator.github }}"
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg
+                      focus:ring-2 focus:ring-indigo-400 outline-none"
+               required>
+      </div>
+
+      <!-- Source -->
+      <div>
+        <label class="block text-sm font-medium mb-1">Source</label>
+        <input type="text"
+               name="source"
+               value="{{ collaborator.source }}"
+               class="w-full border border-gray-300 px-3 py-2 rounded-lg
+                      focus:ring-2 focus:ring-indigo-400 outline-none"
+               required>
+      </div>
+
+
     </form>
 
     <hr class="my-4">

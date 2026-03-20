@@ -25,6 +25,7 @@
 <div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md">
 
 <h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">
+
 New Collaborator
 </h2>
 
@@ -62,6 +63,55 @@ New Collaborator
 <label class="block text-sm mb-1">Contribution</label>
 <input type="text" name="contribution" required
        placeholder="Worked on backend, UI, database..."
+       class="w-full border px-3 py-2 rounded-lg
+              focus:ring-2 focus:ring-indigo-400 outline-none">
+</div>
+
+
+<!-- Contribution Type -->
+<div>
+<label class="block text-sm mb-1">Contribution Type</label>
+
+<select name="contribution_type" required
+class="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none bg-white">
+
+<option value="" disabled selected>Select contribution type</option>
+
+{% for t in types %}
+
+<option value="{{ t.id }}">
+{{ t.name }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<!-- LinkedIn -->
+<div>
+<label class="block text-sm mb-1">LinkedIn</label>
+<input type="url" name="linkedin" required
+       placeholder="https://linkedin.com/in/username"
+       class="w-full border px-3 py-2 rounded-lg
+              focus:ring-2 focus:ring-indigo-400 outline-none">
+</div>
+
+<!-- GitHub -->
+<div>
+<label class="block text-sm mb-1">GitHub</label>
+<input type="url" name="github" required
+       placeholder="https://github.com/username"
+       class="w-full border px-3 py-2 rounded-lg
+              focus:ring-2 focus:ring-indigo-400 outline-none">
+</div>
+
+<!-- Source -->
+<div>
+<label class="block text-sm mb-1">Source</label>
+<input type="text" name="source" required
+       placeholder="WhatsApp, LinkedIn, Instagram..."
        class="w-full border px-3 py-2 rounded-lg
               focus:ring-2 focus:ring-indigo-400 outline-none">
 </div>

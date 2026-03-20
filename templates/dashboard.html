@@ -72,7 +72,7 @@
 </div>
 
 <!-- ================= QUICK ACTIONS ================= -->
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-10">
 
   <a href="{{ url_for('add_link') }}"
      class="bg-white border rounded-xl p-5 hover:shadow-md transition">
@@ -91,6 +91,12 @@
     <p class="text-sm text-slate-500">Manage</p>
     <h3 class="font-semibold text-lg mt-1">Add Collaborator</h3>
   </a>
+
+  <a href="{{ url_for('contribution_types') }}"
+   class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+  <p class="text-sm text-slate-500">Manage</p>
+  <h3 class="font-semibold text-lg mt-1">Contribution Types</h3>
+</a>
 
 </div>
 

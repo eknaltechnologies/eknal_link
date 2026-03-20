@@ -55,12 +55,22 @@ class FileUpload(db.Model):
     title = db.Column(db.String(120), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
 
+class ContributionType(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+
 class Collaborator(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), nullable=False)
     resume_url = db.Column(db.String(300), nullable=False)
+    contribution_type_id = db.Column(db.Integer, db.ForeignKey('contribution_type.id'), nullable=False)
+    contribution_type = db.relationship('ContributionType')
     contribution = db.Column(db.String(300), nullable=False)
+    linkedin = db.Column(db.String(300), nullable = False)
+    github = db.Column(db.String(300), nullable = False)
+    source = db.Column(db.String(120), nullable = False)
+
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -228,6 +238,49 @@ def delete_file(id):
     flash("File deleted", "success")
     return redirect(url_for("dashboard"))
 
+@app.route("/contribution-types")
+@admin_required
+def contribution_types():
+    types = ContributionType.query.all()
+    return render_template("contribution_types.html" , types=types)
+
+@app.route("/add-contribution-type", methods=["GET","POST"])
+@admin_required
+def add_contribution_type():
+    if request.method == "POST":
+        db.session.add(
+            ContributionType(name=request.form["name"])
+
+        )
+        db.session.commit()
+        flash("Contribution type added", "success")
+        return redirect(url_for("contribution_types"))
+    return render_template("add_contribution_type.html")
+
+@app.route("/edit-contribution-type/<int:id>", methods=["GET","POST"])
+@admin_required
+def edit_contribution_type(id):
+    ctype = ContributionType.query.get_or_404(id)
+    if request.method == "POST":
+        ctype.name = request.form["name"]
+        db.session.commit()
+        flash("Contribution type updated", "success")
+        return redirect(url_for("contribution_types"))
+    return render_template("edit_contribution_type.html",ctype=ctype)
+
+@app.route("/delete-contribution-type/<int:id>", methods=["POST"])
+@admin_required
+def delete_contribution_type(id):
+    ctype = ContributionType.query.get_or_404(id)
+    collaborator = Collaborator.query.filter_by(contribution_type_id=id).first()
+    if collaborator:
+        flash("cannot delete.This contribution type is used by collaborators", "danger")
+        return redirect(url_for("contribution_types"))
+    db.session.delete(ctype)
+    db.session.commit()
+    flash("Contribution type deleted", "success")
+    return redirect(url_for("contribution_types"))
+
 # ---------------- COLLABORATORS ----------------
 @app.route("/collaborators")
 def collaborators():
@@ -237,34 +290,48 @@ def collaborators():
 @app.route("/add-collaborator", methods=["GET","POST"])
 @admin_required
 def add_collaborator():
+    types = ContributionType.query.all()
     if request.method == "POST":
+
+
         db.session.add(Collaborator(
             name=request.form["name"],
             email=request.form["email"],
             resume_url=request.form["resume"],
-            contribution=request.form["contribution"]
+            contribution=request.form["contribution"],
+            contribution_type_id=request.form["contribution_type"],
+            linkedin=request.form["linkedin"],
+            github=request.form["github"],
+            source=request.form["source"]
         ))
         db.session.commit()
         flash("Collaborator added", "success")
         return redirect(url_for("collaborators"))
 
-    return render_template("add_collaborator.html")
+    return render_template("add_collaborator.html", types=types)
 
 @app.route("/edit-collaborator/<int:id>", methods=["GET","POST"])
 @admin_required
 def edit_collaborator(id):
+
     c = Collaborator.query.get_or_404(id)
+    types = ContributionType.query.all()
 
     if request.method == "POST":
         c.name = request.form["name"]
         c.email = request.form["email"]
         c.resume_url = request.form["resume"]
         c.contribution = request.form["contribution"]
+        c.contribution_type_id= request.form["contribution_type"]
+        c.linkedin = request.form["linkedin"]
+        c.github = request.form["github"]
+        c.source = request.form["source"]
+
         db.session.commit()
         flash("Collaborator updated", "success")
         return redirect(url_for("collaborators"))
 
-    return render_template("edit_collaborator.html", collaborator=c)
+    return render_template("edit_collaborator.html", collaborator=c,types=types)
 
 @app.route("/delete-collaborator/<int:id>", methods=["POST"])
 @admin_required
@@ -451,3 +518,4 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(debug=True)
+
