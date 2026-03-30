@@ -10,6 +10,8 @@ import redis
 import smtplib
 from email.message import EmailMessage
 from email.mime.text import MIMEText
+from flask_migrate import Migrate
+from sqlalchemy import MetaData
 import random
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
@@ -28,7 +30,10 @@ redis_client = redis.Redis(
 # ---------------- APP ----------------
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", os.urandom(24).hex())
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///data.db"
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+app.config["SQLALCHEMY_DATABASE_URI"] = \
+    "sqlite:///" + os.path.join(basedir, "instance", "data.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 UPLOAD_FOLDER = "uploads"
@@ -38,7 +43,16 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-db = SQLAlchemy(app)
+naming_convention = {
+    "fk": "fk_%(table_name)s_%(referred_table_name)s",
+}
+
+metadata = MetaData(naming_convention=naming_convention)
+
+
+db = SQLAlchemy(app, metadata=metadata)
+
+migrate = Migrate(app, db)
 
 # ---------------- ADMIN CREDENTIALS ----------------
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME")
@@ -64,12 +78,13 @@ class Collaborator(db.Model):
     name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), nullable=False)
     resume_url = db.Column(db.String(300), nullable=False)
-    contribution_type_id = db.Column(db.Integer, db.ForeignKey('contribution_type.id'), nullable=False)
+    contribution_type_id = db.Column(db.Integer, db.ForeignKey('contribution_type.id'))
     contribution_type = db.relationship('ContributionType')
-    contribution = db.Column(db.String(300), nullable=False)
-    linkedin = db.Column(db.String(300), nullable = False)
-    github = db.Column(db.String(300), nullable = False)
-    source = db.Column(db.String(120), nullable = False)
+    contribution = db.Column(db.String(300), nullable=True)
+    linkedin = db.Column(db.String(300), nullable = True)
+    github = db.Column(db.String(300), nullable = True)
+    source = db.Column(db.String(120), nullable = True)
+    
 
 
 def allowed_file(filename):
@@ -299,7 +314,7 @@ def add_collaborator():
             email=request.form["email"],
             resume_url=request.form["resume"],
             contribution=request.form["contribution"],
-            contribution_type_id=request.form["contribution_type"],
+            contribution_type_id=int(request.form["contribution_type"]),
             linkedin=request.form["linkedin"],
             github=request.form["github"],
             source=request.form["source"]
@@ -515,7 +530,5 @@ def self_edit_collaborator():
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-    app.run(debug=True)
+    app.run(debug=True, port = 7000)
 
