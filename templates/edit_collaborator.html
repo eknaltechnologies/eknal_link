@@ -128,10 +128,9 @@
         <label class="block text-sm font-medium mb-1">LinkedIn</label>
         <input type="url"
                name="linkedin"
-               value="{{ collaborator.linkedin }}"
+               value="{{ collaborator.linkedin or '' }}"
                class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none"
-               required>
+                      focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
       
       <!-- GitHub -->
@@ -139,10 +138,9 @@
         <label class="block text-sm font-medium mb-1">GitHub</label>
         <input type="url"
                name="github"
-               value="{{ collaborator.github }}"
+               value="{{ collaborator.github or '' }}"
                class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none"
-               required>
+                      focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
 
       <!-- Source -->
@@ -150,10 +148,9 @@
         <label class="block text-sm font-medium mb-1">Source</label>
         <input type="text"
                name="source"
-               value="{{ collaborator.source }}"
+               value="{{ collaborator.source or '' }}"
                class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none"
-               required>
+                      focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
 
 
