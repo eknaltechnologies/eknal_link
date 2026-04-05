@@ -537,5 +537,5 @@ def self_edit_collaborator():
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True, port = 9123)
+    app.run(debug=False, port = 9123)
 
