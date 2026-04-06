@@ -89,11 +89,6 @@ class Collaborator(db.Model):
     source = db.Column(db.String(120), nullable = True)
     
 
-with app.app_context():
-    db_path = os.path.join(instance_folder, "data.db")
-    if not os.path.exists(db_path):
-        db.create_all()
-
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 

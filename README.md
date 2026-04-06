@@ -24,6 +24,34 @@ Install the dependencies:
 pip install -r requirements.txt
 ```
 
+## Database Setup
+
+After cloning the repo and installing dependencies, initialize and migrate the database:
+
+```powershell
+# Set Flask app (Windows PowerShell)
+$env:FLASK_APP="app.py"
+
+# Initialize migrations (first time only)
+flask db init
+
+# Create migration from models
+flask db migrate -m "Initial migration"
+
+# Apply migrations to create database tables
+flask db upgrade
+```
+
+Or for Windows CMD:
+```cmd
+set FLASK_APP=app.py
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
+```
+
+This will create the SQLite database at `instance/data.db` with all required tables.
+
 Create a `.env` file in the project root with these values:
 
 ```env
@@ -59,4 +87,5 @@ On first start, the app automatically creates the `instance` folder and the SQLi
 - Public resources are available at `/resources`
 - Admin login is available at `/admin-login`
 - The self-edit OTP flow requires Redis and valid email settings
-- If you delete `instance/data.db`, restart the app to recreate the database
+- To reset the database, delete `instance/data.db` and run `flask db upgrade` again
+- For making schema changes, use `flask db migrate -m "description"` followed by `flask db upgrade`
