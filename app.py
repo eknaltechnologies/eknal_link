@@ -439,6 +439,7 @@ def send_email(to, otp):
 </html>
 """, subtype="html")
     server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
+    server.starttls()
     server.login(
         os.getenv("EMAIL_USER"),
         os.getenv("EMAIL_PASS")
