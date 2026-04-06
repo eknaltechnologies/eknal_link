@@ -79,7 +79,7 @@ class ContributionType(db.Model):
 class Collaborator(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), nullable=False,unique=True)
     resume_url = db.Column(db.String(300), nullable=False)
     contribution_type_id = db.Column(db.Integer, db.ForeignKey('contribution_type.id'))
     contribution_type = db.relationship('ContributionType')
@@ -309,9 +309,11 @@ def collaborators():
 def add_collaborator():
     types = ContributionType.query.all()
     if request.method == "POST":
-
-
-        db.session.add(Collaborator(
+        existing = Collaborator.query.filter_by(email=request.form["email"]).first()
+        if existing:
+            flash("A collaborator with this email already exists", "danger")
+            return redirect(url_for("add_collaborator"))
+        collaborator = Collaborator(
             name=request.form["name"],
             email=request.form["email"],
             resume_url=request.form["resume"],
@@ -320,8 +322,16 @@ def add_collaborator():
             linkedin=request.form["linkedin"],
             github=request.form["github"],
             source=request.form["source"]
-        ))
+        )
+        db.session.add(collaborator)
         db.session.commit()
+
+        try:
+            send_collaborator_added_email(collaborator.email, collaborator.name)
+        except Exception:
+            app.logger.exception("Failed to send collaborator-added email")
+            flash("Collaborator added, but email notification failed", "warning")
+
         flash("Collaborator added", "success")
         return redirect(url_for("collaborators"))
 
@@ -428,14 +438,95 @@ def send_email(to, otp):
 </body>
 </html>
 """, subtype="html")
-    server = smtplib.SMTP("smtp.zoho.in", 587)
-    server.starttls()
+    server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
     server.login(
         os.getenv("EMAIL_USER"),
         os.getenv("EMAIL_PASS")
     )
     server.send_message(msg)
     server.quit()
+
+def send_collaborator_added_email(to, name):
+        msg = EmailMessage()
+        msg["From"] = os.getenv("EMAIL_FROM")
+        msg["To"] = to
+        msg["Subject"] = "Welcome to Eknal Link"
+        msg.add_alternative(f"""
+<html>
+<body style="margin:0; padding:0; background-color:#f4f6fb; font-family: Arial, sans-serif;">
+
+    <div style="max-width:520px; margin:40px auto; background:#ffffff; border-radius:14px; padding:35px 30px; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
+
+        <!-- Logo -->
+        <div style="text-align:center; margin-bottom:20px;">
+            <img src="http://stack.eknaltechnologies.in/static/uploads/eknal_link.png"
+                 style="height:55px;"
+                 alt="Eknal Link Logo"/>
+        </div>
+
+        <!-- Heading -->
+        <h2 style="text-align:center; color:#4f46e5; margin-bottom:20px; font-size:22px;">
+            Welcome to Eknal Contributors 🎉
+        </h2>
+
+        <!-- Greeting -->
+        <p style="color:#444; font-size:15px; margin-bottom:15px;">
+            Hi {name},
+        </p>
+
+        <!-- Content -->
+        <p style="color:#555; font-size:15px; line-height:1.6; margin-bottom:12px;">
+            You have been successfully added as an Eknal contributor.
+        </p>
+
+        <p style="color:#555; font-size:15px; line-height:1.6; margin-bottom:20px;">
+            Thank you for your valuable contribution. We truly appreciate your support.
+        </p>
+
+        <p style="color:#777; font-size:14px; margin-bottom:25px;">
+            You can update your profile anytime using the option below.
+        </p>
+
+        <!-- Button -->
+        <div style="text-align:center;">
+            <a href="{request.url_root}request-edit" 
+               style="
+                    display:inline-block;
+                    padding:13px 26px;
+                    background:linear-gradient(135deg, #4f46e5, #6366f1);
+                    color:#ffffff;
+                    text-decoration:none;
+                    border-radius:10px;
+                    font-size:14px;
+                    font-weight:bold;
+                    box-shadow:0 4px 10px rgba(79,70,229,0.3);
+               ">
+                Edit Your Profile
+            </a>
+        </div>
+
+        <!-- Divider -->
+        <hr style="border:none; border-top:1px solid #eee; margin:30px 0;">
+
+        <!-- Footer -->
+        <p style="text-align:center; font-size:13px; color:#888;">
+            © Eknal Technologies
+        </p>
+
+    </div>
+
+</body>
+</html>
+""", subtype="html")
+        server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
+        server.starttls()
+        server.login(
+                os.getenv("EMAIL_USER"),
+                os.getenv("EMAIL_PASS")
+        )
+        server.send_message(msg)
+        server.quit()
+
 def generate_otp():
     return str(random.randint(100000, 999999))
 
