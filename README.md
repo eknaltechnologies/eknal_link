@@ -28,23 +28,8 @@ pip install -r requirements.txt
 
 After cloning the repo and installing dependencies, initialize and migrate the database:
 
-```powershell
-# Set Flask app (Windows PowerShell)
-$env:FLASK_APP="app.py"
-
-# Initialize migrations (first time only)
-flask db init
-
-# Create migration from models
-flask db migrate -m "Initial migration"
-
-# Apply migrations to create database tables
-flask db upgrade
-```
-
-Or for Windows CMD:
+Windows CMD:
 ```cmd
-set FLASK_APP=app.py
 flask db init
 flask db migrate -m "Initial migration"
 flask db upgrade
@@ -64,6 +49,8 @@ REDIS_PASSWORD=
 EMAIL_USER=your-email@example.com
 EMAIL_PASS=your-email-password
 EMAIL_FROM=your-email@example.com
+EMAIL_HOST= your-host
+EMAIL_PORT=561
 ```
 
 ## Start the server

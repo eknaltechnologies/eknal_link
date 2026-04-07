@@ -309,10 +309,6 @@ def collaborators():
 def add_collaborator():
     types = ContributionType.query.all()
     if request.method == "POST":
-        existing = Collaborator.query.filter_by(email=request.form["email"]).first()
-        if existing:
-            flash("A collaborator with this email already exists", "danger")
-            return redirect(url_for("add_collaborator"))
         collaborator = Collaborator(
             name=request.form["name"],
             email=request.form["email"],
@@ -374,70 +370,14 @@ def send_email(to, otp):
     msg["From"] = os.getenv("EMAIL_FROM")
     msg["To"] = to
     msg["Subject"] = "Eknal Technologies – Email Verification Code"
-   # msg.set_content(f"Your OTP for editing your profile is: {otp}")
-    msg.add_alternative(f"""
-<html>
-<body style="background-color:#f4f6fb; font-family: Arial, sans-serif; padding:30px;">
-
-  <div style="
-    max-width:480px;
-    margin:auto;
-    background:#ffffff;
-    border-radius:12px;
-    padding:30px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    text-align:center;
-  ">
-      
-    <!-- Logo -->
-   <img src="http://stack.eknaltechnologies.in/static/uploads/eknal_link.png"
-         style="height:50px;margin-bottom:20px;"
-         alt="Eknal Link Logo"/>
-
-    <h2 style="color:#4f46e5; margin-bottom:10px;">
-      OTP Verification
-    </h2>
-
-    <p style="color:#555; font-size:15px;">
-      We received a request to update your collaborator profile.
-    </p>
-
-    <p style="color:#555; font-size:15px;">
-      Use the verification code below:
-    </p>
-
-    <div style="
-      font-size:28px;
-      font-weight:bold;
-      letter-spacing:6px;
-      background:#f0f2ff;
-      padding:15px;
-      border-radius:8px;
-      margin:20px 0;
-      color:#111;
-    ">
-      {otp}
-    </div>
-
-    <p style="color:#777; font-size:14px;">
-      This code is valid for 5 minutes.
-    </p>
-
-    <p style="color:#999; font-size:13px;">
-      If you did not request this, you can safely ignore this email.
-    </p>
-
-    <hr style="border:none;border-top:1px solid #eee;margin:25px 0;">
-
-    <p style="font-size:13px;color:#666;">
-      © Eknal Technologies
-    </p>
-
-  </div>
-
-</body>
-</html>
-""", subtype="html")
+    # msg.set_content(f"Your OTP for editing your profile is: {otp}")
+    msg.add_alternative(
+        render_template(
+            "otp_email.html",
+            otp=otp,
+        ),
+        subtype="html",
+    )
     server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
     server.starttls()
     server.login(
@@ -448,85 +388,26 @@ def send_email(to, otp):
     server.quit()
 
 def send_collaborator_added_email(to, name):
-        msg = EmailMessage()
-        msg["From"] = os.getenv("EMAIL_FROM")
-        msg["To"] = to
-        msg["Subject"] = "Welcome to Eknal Link"
-        msg.add_alternative(f"""
-<html>
-<body style="margin:0; padding:0; background-color:#f4f6fb; font-family: Arial, sans-serif;">
-
-    <div style="max-width:520px; margin:40px auto; background:#ffffff; border-radius:14px; padding:35px 30px; box-shadow:0 6px 18px rgba(0,0,0,0.08);">
-
-        <!-- Logo -->
-        <div style="text-align:center; margin-bottom:20px;">
-            <img src="http://stack.eknaltechnologies.in/static/uploads/eknal_link.png"
-                 style="height:55px;"
-                 alt="Eknal Link Logo"/>
-        </div>
-
-        <!-- Heading -->
-        <h2 style="text-align:center; color:#4f46e5; margin-bottom:20px; font-size:22px;">
-            Welcome to Eknal Contributors 🎉
-        </h2>
-
-        <!-- Greeting -->
-        <p style="color:#444; font-size:15px; margin-bottom:15px;">
-            Hi {name},
-        </p>
-
-        <!-- Content -->
-        <p style="color:#555; font-size:15px; line-height:1.6; margin-bottom:12px;">
-            You have been successfully added as an Eknal contributor.
-        </p>
-
-        <p style="color:#555; font-size:15px; line-height:1.6; margin-bottom:20px;">
-            Thank you for your valuable contribution. We truly appreciate your support.
-        </p>
-
-        <p style="color:#777; font-size:14px; margin-bottom:25px;">
-            You can update your profile anytime using the option below.
-        </p>
-
-        <!-- Button -->
-        <div style="text-align:center;">
-            <a href="{request.url_root}request-edit" 
-               style="
-                    display:inline-block;
-                    padding:13px 26px;
-                    background:linear-gradient(135deg, #4f46e5, #6366f1);
-                    color:#ffffff;
-                    text-decoration:none;
-                    border-radius:10px;
-                    font-size:14px;
-                    font-weight:bold;
-                    box-shadow:0 4px 10px rgba(79,70,229,0.3);
-               ">
-                Edit Your Profile
-            </a>
-        </div>
-
-        <!-- Divider -->
-        <hr style="border:none; border-top:1px solid #eee; margin:30px 0;">
-
-        <!-- Footer -->
-        <p style="text-align:center; font-size:13px; color:#888;">
-            © Eknal Technologies
-        </p>
-
-    </div>
-
-</body>
-</html>
-""", subtype="html")
-        server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
-        server.starttls()
-        server.login(
-                os.getenv("EMAIL_USER"),
-                os.getenv("EMAIL_PASS")
-        )
-        server.send_message(msg)
-        server.quit()
+    msg = EmailMessage()
+    msg["From"] = os.getenv("EMAIL_FROM")
+    msg["To"] = to
+    msg["Subject"] = "Welcome to Eknal Link"
+    msg.add_alternative(
+        render_template(
+            "collaborator_email.html",
+            name=name,
+            edit_url=url_for("request_edit", _external=True),
+        ),
+        subtype="html",
+    )
+    server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
+    server.starttls()
+    server.login(
+        os.getenv("EMAIL_USER"),
+        os.getenv("EMAIL_PASS")
+    )
+    server.send_message(msg)
+    server.quit()
 
 def generate_otp():
     return str(random.randint(100000, 999999))
