@@ -390,7 +390,7 @@ def send_email(to, otp):
   ">
       
     <!-- Logo -->
-   <img src="https://i.ibb.co/39ZNH1W0/eknal-link.png"
+   <img src="http://stack.eknaltechnologies.in/static/uploads/eknal_link.png"
          style="height:50px;margin-bottom:20px;"
          alt="Eknal Link Logo"/>
 
