@@ -14,7 +14,7 @@ Eknal Link is a Flask application for managing resources, uploaded files, contri
 From the project root, create and activate a virtual environment:
 
 ```powershell
-python -m venv .venv
+python -m venv .venv or python -m venv <your_env_name>
 .venv\Scripts\activate
 ```
 
@@ -40,17 +40,17 @@ This will create the SQLite database at `instance/data.db` with all required tab
 Create a `.env` file in the project root with these values:
 
 ```env
-SECRET_KEY=your-secret-key
-ADMIN_USERNAME=your-admin-username
-ADMIN_PASSWORD=your-admin-password
-REDIS_SERVER_NUMBER=localhost
-REDIS_PORT_NUMBER=6379
-REDIS_PASSWORD=
-EMAIL_USER=your-email@example.com
-EMAIL_PASS=your-email-password
-EMAIL_FROM=your-email@example.com
-EMAIL_HOST= your-host
-EMAIL_PORT=561
+SECRET_KEY=your_secret_key
+ADMIN_USERNAME=your_admin_username
+ADMIN_PASSWORD=your_admin_password
+REDIS_SERVER_NUMBER=redis_host
+REDIS_PORT_NUMBER=redis_port
+REDIS_PASSWORD=your_redis_password
+EMAIL_USER=email_user
+EMAIL_PASS=email_password
+EMAIL_FROM=your_from_email
+EMAIL_HOST= your_email_host
+EMAIL_PORT=your_email_port
 ```
 
 ## Start the server
