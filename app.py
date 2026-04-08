@@ -79,7 +79,7 @@ class ContributionType(db.Model):
 class Collaborator(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    email = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), nullable=False,unique=True)
     resume_url = db.Column(db.String(300), nullable=False)
     contribution_type_id = db.Column(db.Integer, db.ForeignKey('contribution_type.id'))
     contribution_type = db.relationship('ContributionType')
@@ -88,11 +88,6 @@ class Collaborator(db.Model):
     github = db.Column(db.String(300), nullable = True)
     source = db.Column(db.String(120), nullable = True)
     
-
-with app.app_context():
-    db_path = os.path.join(instance_folder, "data.db")
-    if not os.path.exists(db_path):
-        db.create_all()
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -314,9 +309,7 @@ def collaborators():
 def add_collaborator():
     types = ContributionType.query.all()
     if request.method == "POST":
-
-
-        db.session.add(Collaborator(
+        collaborator = Collaborator(
             name=request.form["name"],
             email=request.form["email"],
             resume_url=request.form["resume"],
@@ -325,8 +318,16 @@ def add_collaborator():
             linkedin=request.form["linkedin"],
             github=request.form["github"],
             source=request.form["source"]
-        ))
+        )
+        db.session.add(collaborator)
         db.session.commit()
+
+        try:
+            send_collaborator_added_email(collaborator.email, collaborator.name)
+        except Exception:
+            app.logger.exception("Failed to send collaborator-added email")
+            flash("Collaborator added, but email notification failed", "warning")
+
         flash("Collaborator added", "success")
         return redirect(url_for("collaborators"))
 
@@ -369,71 +370,15 @@ def send_email(to, otp):
     msg["From"] = os.getenv("EMAIL_FROM")
     msg["To"] = to
     msg["Subject"] = "Eknal Technologies – Email Verification Code"
-   # msg.set_content(f"Your OTP for editing your profile is: {otp}")
-    msg.add_alternative(f"""
-<html>
-<body style="background-color:#f4f6fb; font-family: Arial, sans-serif; padding:30px;">
-
-  <div style="
-    max-width:480px;
-    margin:auto;
-    background:#ffffff;
-    border-radius:12px;
-    padding:30px;
-    box-shadow:0 4px 12px rgba(0,0,0,0.08);
-    text-align:center;
-  ">
-      
-    <!-- Logo -->
-   <img src="https://i.ibb.co/39ZNH1W0/eknal-link.png"
-         style="height:50px;margin-bottom:20px;"
-         alt="Eknal Link Logo"/>
-
-    <h2 style="color:#4f46e5; margin-bottom:10px;">
-      OTP Verification
-    </h2>
-
-    <p style="color:#555; font-size:15px;">
-      We received a request to update your collaborator profile.
-    </p>
-
-    <p style="color:#555; font-size:15px;">
-      Use the verification code below:
-    </p>
-
-    <div style="
-      font-size:28px;
-      font-weight:bold;
-      letter-spacing:6px;
-      background:#f0f2ff;
-      padding:15px;
-      border-radius:8px;
-      margin:20px 0;
-      color:#111;
-    ">
-      {otp}
-    </div>
-
-    <p style="color:#777; font-size:14px;">
-      This code is valid for 5 minutes.
-    </p>
-
-    <p style="color:#999; font-size:13px;">
-      If you did not request this, you can safely ignore this email.
-    </p>
-
-    <hr style="border:none;border-top:1px solid #eee;margin:25px 0;">
-
-    <p style="font-size:13px;color:#666;">
-      © Eknal Technologies
-    </p>
-
-  </div>
-
-</body>
-</html>
-""", subtype="html")
-    server = smtplib.SMTP("smtp.zoho.in", 587)
+    # msg.set_content(f"Your OTP for editing your profile is: {otp}")
+    msg.add_alternative(
+        render_template(
+            "otp_email.html",
+            otp=otp,
+        ),
+        subtype="html",
+    )
+    server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
     server.starttls()
     server.login(
         os.getenv("EMAIL_USER"),
@@ -441,6 +386,29 @@ def send_email(to, otp):
     )
     server.send_message(msg)
     server.quit()
+
+def send_collaborator_added_email(to, name):
+    msg = EmailMessage()
+    msg["From"] = os.getenv("EMAIL_FROM")
+    msg["To"] = to
+    msg["Subject"] = "Welcome to Eknal Link"
+    msg.add_alternative(
+        render_template(
+            "collaborator_email.html",
+            name=name,
+            edit_url=url_for("request_edit", _external=True),
+        ),
+        subtype="html",
+    )
+    server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
+    server.starttls()
+    server.login(
+        os.getenv("EMAIL_USER"),
+        os.getenv("EMAIL_PASS")
+    )
+    server.send_message(msg)
+    server.quit()
+
 def generate_otp():
     return str(random.randint(100000, 999999))
 
