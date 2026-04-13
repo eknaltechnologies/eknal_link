@@ -166,20 +166,7 @@
          class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
         Back
       </a>
-
-      <!-- Delete -->
-      <form action="/delete-collaborator/{{ collaborator.id }}"
-            method="post"
-            onsubmit="return confirm('Delete this collaborator?');">
-
-        <button type="submit"
-                class="px-4 py-2 border border-red-500 text-red-600
-                       rounded-lg hover:bg-red-50">
-          Delete
-        </button>
-
-      </form>
-
+      
       <!-- Update -->
       <button form="updateForm"
               type="submit"
