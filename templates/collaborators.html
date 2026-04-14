@@ -200,6 +200,15 @@ Edit
 
 </div>
 
+<!-- DELETE -->
+ <form method="POST" action="/delete-collaborator/{{ c.id }}"
+onsubmit="return confirm('Delete {{ c.name }}?')">
+  <button type="submit"
+    class="text-sm text-red-500 hover:underline">
+    Delete
+  </button>
+</form>
+
 
 
 <!-- SOCIAL -->

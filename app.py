@@ -309,6 +309,10 @@ def collaborators():
 def add_collaborator():
     types = ContributionType.query.all()
     if request.method == "POST":
+        email = request.form["email"].strip()
+        if Collaborator.query.filter_by(email=email).first():
+            flash("A collaborator with this email already exists", "danger")
+            return render_template("add_collaborator.html", types=types)
         collaborator = Collaborator(
             name=request.form["name"],
             email=request.form["email"],
