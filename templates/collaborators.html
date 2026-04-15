@@ -200,23 +200,38 @@ Edit
 
 </div>
 
+<!-- DELETE -->
+ <form method="POST" action="/delete-collaborator/{{ c.id }}"
+onsubmit="return confirm('Delete {{ c.name }}?')">
+  <button type="submit"
+    class="text-sm text-red-500 hover:underline">
+    Delete
+  </button>
+</form>
+
 
 
 <!-- SOCIAL -->
 
+{% if c.linkedin.strip() or c.github.strip() %}
 <div class="flex items-center gap-3 mt-4">
 
+{% if c.linkedin %}
 <a href="{{ c.linkedin }}" target="_blank">
 <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png"
 class="w-5 h-5 hover:scale-110">
 </a>
+{% endif %}
 
+{% if c.github %}
 <a href="{{ c.github }}" target="_blank">
 <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png"
 class="w-5 h-5 hover:scale-110">
 </a>
+{% endif %}
 
 </div>
+{% endif %}
 
 
 </div>
