@@ -14,6 +14,7 @@ from flask_migrate import Migrate
 from sqlalchemy import MetaData
 import random
 import string
+from datetime import datetime
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -95,6 +96,7 @@ class User(db.Model):
     username = db.Column(db.String(120),primary_key=True,nullable=False)
     password = db.Column(db.String(16),nullable=False)
     role_id = db.Column(db.Integer,db.ForeignKey('role.id'))
+    created_at = db.Column(db.String(300),nullable=False)
     Metadata = db.Column(db.String(300),nullable=True)
 
 class Role(db.Model):
@@ -455,6 +457,10 @@ def generate_temporary_password(length=12):
 def generate_otp():
     return str(random.randint(100000, 999999))
 
+
+def current_timestamp():
+    return datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+
 def save_otp(email, otp):
     redis_client.setex(f"otp:{email}", 300, otp)
 
@@ -556,7 +562,8 @@ def create_role():
         if not name:
             flash("Role name cannot be empty", "danger")
             return redirect(url_for("create_role"))
-        new_role = Role(name=name, created_at=str(db.func.now()), updated_at=str(db.func.now()))
+        now = current_timestamp()
+        new_role = Role(name=name, created_at=now, updated_at=now)
         db.session.add(new_role)
         db.session.commit()
         flash("Role created successfully", "success")
@@ -592,7 +599,8 @@ def create_user():
             password=generated_password,
             email=email,
             name=name,
-            role_id=int(role_id)
+            role_id=int(role_id),
+            created_at=current_timestamp()
         )
         db.session.add(new_user)
         db.session.commit()
