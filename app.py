@@ -14,7 +14,6 @@ from email.mime.text import MIMEText
 from flask_migrate import Migrate
 from sqlalchemy import MetaData
 import random
-<<<<<<< HEAD
 import string
 from datetime import datetime
 
@@ -25,8 +24,6 @@ import hashlib
 SECRET = Fernet.generate_key()
 cipher = Fernet(SECRET)
 
-=======
->>>>>>> 847c804b2b09fb47b6c129a8c9b3b616d727d04b
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -101,8 +98,7 @@ class Collaborator(db.Model):
     linkedin = db.Column(db.String(300), nullable = True)
     github = db.Column(db.String(300), nullable = True)
     source = db.Column(db.String(120), nullable = True)
-    
-<<<<<<< HEAD
+
 class User(db.Model):
     email = db.Column(db.String(120), nullable=False,unique=True)
     name = db.Column(db.String(120), nullable=False)
@@ -117,8 +113,6 @@ class Role(db.Model):
     created_at = db.Column(db.String(300),nullable=False)
     updated_at = db.Column(db.String(300),nullable=False)
     Metadata = db.Column(db.String(300),nullable=True)
-=======
->>>>>>> 847c804b2b09fb47b6c129a8c9b3b616d727d04b
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -570,7 +564,6 @@ def self_edit_collaborator():
 
     return render_template("self_edit.html", collaborator=collaborator)
 
-<<<<<<< HEAD
 # ---------------- HashKey ----------------
 
 def generate_user_key() -> bytes:
@@ -704,9 +697,3 @@ def login_user():
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=True, port = 9123)
-=======
-# ---------------- RUN ----------------
-if __name__ == "__main__":
-    app.run(debug=False, port = 9123)
-
->>>>>>> 847c804b2b09fb47b6c129a8c9b3b616d727d04b
