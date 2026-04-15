@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from flask import Flask, render_template, redirect, url_for, request, flash, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
@@ -13,7 +14,6 @@ from email.mime.text import MIMEText
 from flask_migrate import Migrate
 from sqlalchemy import MetaData
 import random
-import string
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -89,20 +89,6 @@ class Collaborator(db.Model):
     github = db.Column(db.String(300), nullable = True)
     source = db.Column(db.String(120), nullable = True)
     
-class User(db.Model):
-    email = db.Column(db.String(120), nullable=False,unique=True)
-    name = db.Column(db.String(120), nullable=False)
-    username = db.Column(db.String(120),primary_key=True,nullable=False)
-    password = db.Column(db.String(16),nullable=False)
-    role_id = db.Column(db.Integer,db.ForeignKey('role.id'))
-    Metadata = db.Column(db.String(300),nullable=True)
-
-class Role(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    created_at = db.Column(db.String(300),nullable=False)
-    updated_at = db.Column(db.String(300),nullable=False)
-    Metadata = db.Column(db.String(300),nullable=True)
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -459,6 +445,10 @@ def generate_temporary_password(length=12):
 def generate_otp():
     return str(random.randint(100000, 999999))
 
+
+def current_timestamp():
+    return datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+
 def save_otp(email, otp):
     redis_client.setex(f"otp:{email}", 300, otp)
 
@@ -550,101 +540,7 @@ def self_edit_collaborator():
 
     return render_template("self_edit.html", collaborator=collaborator)
 
-# ---------------- Roles ----------------
-
-@app.route("/create-role", methods=["GET","POST"])
-@admin_required
-def create_role():
-    if request.method == "POST":
-        name = request.form["role_name"]
-        if not name:
-            flash("Role name cannot be empty", "danger")
-            return redirect(url_for("create_role"))
-        new_role = Role(name=name, created_at=str(db.func.now()), updated_at=str(db.func.now()))
-        db.session.add(new_role)
-        db.session.commit()
-        flash("Role created successfully", "success")
-        return redirect(url_for("dashboard"))
-    return render_template("create_role.html")
-
-# ---------------- Users ----------------
-@app.route("/create-users", methods=["GET","POST"])
-@admin_required
-def create_user():
-    if request.method == "POST":
-        username = request.form["username"]
-        email = request.form["email"]
-        name = request.form["name"]
-        role_id = request.form["role_id"]
-
-        if not all([username, email, name, role_id]):
-            flash("All fields are required", "danger")
-            return redirect(url_for("create_user"))
-
-        if User.query.filter_by(username=username).first():
-            flash("Username already exists", "danger")
-            return redirect(url_for("create_user"))
-
-        if User.query.filter_by(email=email).first():
-            flash("Email already exists", "danger")
-            return redirect(url_for("create_user"))
-
-        generated_password = generate_temporary_password()
-
-        new_user = User(
-            username=username,
-            password=generated_password,
-            email=email,
-            name=name,
-            role_id=int(role_id)
-        )
-        db.session.add(new_user)
-        db.session.commit()
-
-        try:
-            send_user_credentials_email(
-                to=email,
-                name=name,
-                username=username,
-                password=generated_password,
-            )
-            flash("User created and credentials sent by email", "success")
-        except Exception:
-            app.logger.exception("Failed to send user credentials email")
-            flash("User created, but failed to send credentials email", "warning")
-
-        return redirect(url_for("resources"))
-
-    roles = Role.query.all()
-    return render_template("create_user.html", roles=roles)
-
-@app.route("/user-login", methods=["GET","POST"])
-def login_user():
-    if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
-        current_user = User.query.filter_by(username=username).first()
-        if current_user and current_user.password == password:
-            session["user"] = current_user.username
-            return render_template("dashboard.html")
-    return render_template("user_login.html")
-@app.route("/user-login/forget-password", methods=["GET","POST"])
-def forget_password():
-    if request.method == "POST":
-        email = request.form["email"].strip()
-        user = User.query.filter_by(email=email).first()
-        if user:
-            otp = generate_otp()
-            save_otp(email, otp)
-            send_email(email, otp)
-            session["reset_email"] = email
-            flash("OTP sent to your email", "success")
-            return redirect(url_for("reset_password"))
-        flash("Email not found", "danger")
-        return render_template("dashboard.html")
-    return render_template("user_login.html")
-
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True, port = 9123)
+    app.run(debug=False, port = 9123)
 

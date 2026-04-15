@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Eknal Link | New Collaborator</title>
+  <title>Eknal Link | New Role</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -26,7 +26,7 @@
 
 <h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">
 
-New Collaborator
+New Role
 </h2>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -47,97 +47,55 @@ New Collaborator
 
 <form method="post" class="space-y-4" id="collabForm">
 
-<!-- Name -->
+<!-- Role -->
 <div>
-<label class="block text-sm mb-1">Name</label>
-<input type="text" name="name" required autofocus
+<label class="block text-sm mb-1">Role</label>
+<input type="text" name="role_name" required autofocus
        placeholder="Enter full name"
        class="w-full border px-3 py-2 rounded-lg
               focus:ring-2 focus:ring-indigo-400 outline-none">
 </div>
 
-<!-- Email -->
+<!-- Description -->
 <div>
-<label class="block text-sm mb-1">Email</label>
-<input type="email" name="email" required
-       placeholder="example@email.com"
+<label class="block text-sm mb-1">Description</label>
+<textarea name="description" required
+       placeholder="Enter role description"
        class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
+              focus:ring-2 focus:ring-indigo-400 outline-none"></textarea>
 </div>
 
-<!-- Resume -->
+<!-- Access -->
 <div>
-<label class="block text-sm mb-1">Resume URL</label>
-<input type="url" name="resume" required
-       placeholder="https://drive.google.com/..."
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
+<label class="block text-sm mb-1">Access</label>
+<div class="grid grid-cols-2 gap-2 text-sm">
+       <label class="flex items-center gap-2">
+              <input type="checkbox" name="access" value="read" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              Read
+       </label>
+       <label class="flex items-center gap-2">
+              <input type="checkbox" name="access" value="write" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              Write
+       </label>
+       <label class="flex items-center gap-2">
+              <input type="checkbox" name="access" value="update" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              Update
+       </label>
+       <label class="flex items-center gap-2">
+              <input type="checkbox" name="access" value="delete" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+              Delete
+       </label>
+</div>
+<p class="text-xs text-gray-500 mt-2">Select one or more permissions for this role.</p>
 </div>
 
-<!-- Contribution -->
-<div>
-<label class="block text-sm mb-1">Contribution</label>
-<input type="text" name="contribution" required
-       placeholder="Worked on backend, UI, database..."
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
-
-
-<!-- Contribution Type -->
-<div>
-<label class="block text-sm mb-1">Contribution Type</label>
-
-<select name="contribution_type" required
-class="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none bg-white">
-
-<option value="" disabled selected>Select contribution type</option>
-
-{% for t in types %}
-
-<option value="{{ t.id }}">
-{{ t.name }}
-</option>
-
-{% endfor %}
-
-</select>
-
-</div>
-
-<!-- LinkedIn -->
-<div>
-<label class="block text-sm mb-1">LinkedIn</label>
-<input type="url" name="linkedin" 
-       placeholder="https://linkedin.com/in/username"
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
-
-<!-- GitHub -->
-<div>
-<label class="block text-sm mb-1">GitHub</label>
-<input type="url" name="github" 
-       placeholder="https://github.com/username"
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
-
-<!-- Source -->
-<div>
-<label class="block text-sm mb-1">Source</label>
-<input type="text" name="source" 
-       placeholder="WhatsApp, LinkedIn, Instagram..."
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
 
 <hr class="my-4">
 
 <!-- Actions -->
 <div class="flex justify-end gap-3">
 
-<a href="/collaborators"
+<a href="/users"
    class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
 Back
 </a>
@@ -145,7 +103,7 @@ Back
 <button type="submit"
         class="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500
                text-white rounded-lg font-semibold">
-New Collaborator
+New Role
 </button>
 
 </div>
