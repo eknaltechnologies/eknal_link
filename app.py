@@ -16,6 +16,14 @@ from sqlalchemy import MetaData
 import random
 import string
 from datetime import datetime
+
+from cryptography.fernet import Fernet
+import base64
+import hashlib
+
+SECRET = Fernet.generate_key()
+cipher = Fernet(SECRET)
+
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -95,9 +103,8 @@ class User(db.Model):
     email = db.Column(db.String(120), nullable=False,unique=True)
     name = db.Column(db.String(120), nullable=False)
     username = db.Column(db.String(120),primary_key=True,nullable=False)
-    password = db.Column(db.String(16),nullable=False)
+    password = db.Column(db.String(255),nullable=False)
     role_id = db.Column(db.Integer,db.ForeignKey('role.id'))
-    created_at = db.Column(db.String(300),nullable=False)
     Metadata = db.Column(db.String(300),nullable=True)
 
 class Role(db.Model):
@@ -453,7 +460,7 @@ def send_user_credentials_email(to, name, username, password):
 
 def generate_temporary_password(length=12):
     alphabet = string.ascii_letters + string.digits
-    return "".join(random.choice(alphabet) for _ in range(length))
+    return ''.join(random.choice(alphabet) for _ in range(length))
 
 def generate_otp():
     return str(random.randint(100000, 999999))
@@ -553,6 +560,40 @@ def self_edit_collaborator():
 
     return render_template("self_edit.html", collaborator=collaborator)
 
+# ---------------- HashKey ----------------
+
+def generate_user_key() -> bytes:
+    """
+    Derive a key using created_at + secret key
+    """
+    combined =  SECRET
+    derived_key = hashlib.sha256(combined).digest()
+    return base64.urlsafe_b64encode(derived_key)
+
+
+def encrypt_password(password: str) -> bytes:
+    """
+    Encrypt password using user-specific derived key
+    """
+    user_key = generate_user_key()
+    user_cipher = Fernet(user_key)
+    return user_cipher.encrypt(password.encode())
+
+
+def verify_password(stored_encrypted: bytes, input_password: str) -> bool:
+    """
+    Decrypt and verify password
+    """
+    try:
+        if isinstance(stored_encrypted, str):
+            stored_encrypted = stored_encrypted.encode()
+        user_key = generate_user_key()
+        user_cipher = Fernet(user_key)
+        decrypted = user_cipher.decrypt(stored_encrypted).decode()
+        return decrypted == input_password
+    except:
+        return False
+
 # ---------------- Roles ----------------
 
 @app.route("/create-role", methods=["GET","POST"])
@@ -609,14 +650,14 @@ def create_user():
             return redirect(url_for("create_user"))
 
         generated_password = generate_temporary_password()
+        encrypted_password = encrypt_password(generated_password).decode()
 
         new_user = User(
             username=username,
-            password=generated_password,
+            password=encrypted_password,
             email=email,
             name=name,
             role_id=int(role_id),
-            created_at=current_timestamp()
         )
         db.session.add(new_user)
         db.session.commit()
@@ -644,7 +685,7 @@ def login_user():
         username = request.form["username"]
         password = request.form["password"]
         current_user = User.query.filter_by(username=username).first()
-        if current_user and current_user.password == password:
+        if current_user and verify_password(current_user.password, password):
             session["user"] = current_user.username
             return redirect(url_for("dashboard"))
     return render_template("user_login.html")
@@ -652,4 +693,3 @@ def login_user():
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=True, port = 9123)
-
