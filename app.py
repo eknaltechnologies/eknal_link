@@ -540,6 +540,22 @@ def self_edit_collaborator():
 
     return render_template("self_edit.html", collaborator=collaborator)
 
+
+@app.route("/user/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form["email"].strip()
+        user = User.query.filter_by(email=email).first()
+        if user:
+            otp = generate_otp()
+            save_otp(email, otp)
+            send_email(email, otp)
+            session["reset_email"] = email
+            flash("OTP sent to your email", "success")
+            return redirect(url_for("reset_password"))
+        flash("Email not found", "danger")
+    return render_template("forgot_password.html")
+
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=False, port = 9123)
