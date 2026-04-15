@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from flask import Flask, render_template, redirect, url_for, request, flash, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
@@ -559,11 +560,26 @@ def self_edit_collaborator():
 def create_role():
     if request.method == "POST":
         name = request.form["role_name"]
+        description = request.form.get("description", "").strip()
+        selected_access = request.form.getlist("access")
+        valid_access = {"read", "write", "update", "delete"}
+        selected_access = [perm for perm in selected_access if perm in valid_access]
+
         if not name:
             flash("Role name cannot be empty", "danger")
             return redirect(url_for("create_role"))
+
+        if not selected_access:
+            flash("Select at least one access permission", "danger")
+            return redirect(url_for("create_role"))
+
+        if not description:
+            flash("Description cannot be empty", "danger")
+            return redirect(url_for("create_role"))
+
         now = current_timestamp()
-        new_role = Role(name=name, created_at=now, updated_at=now)
+        role_metadata = json.dumps({"description": description, "access": selected_access})
+        new_role = Role(name=name, created_at=now, updated_at=now, Metadata=role_metadata)
         db.session.add(new_role)
         db.session.commit()
         flash("Role created successfully", "success")
@@ -630,7 +646,7 @@ def login_user():
         current_user = User.query.filter_by(username=username).first()
         if current_user and current_user.password == password:
             session["user"] = current_user.username
-            return render_template("dashboard.html")
+            return redirect(url_for("dashboard"))
     return render_template("user_login.html")
 
 # ---------------- RUN ----------------

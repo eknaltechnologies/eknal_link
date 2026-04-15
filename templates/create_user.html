@@ -1,105 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Create User</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <title>Eknal Link | New User</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
 <body class="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 via-white to-indigo-100 text-gray-900 relative overflow-x-hidden">
 
-<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
+<!-- Background Pattern -->
+<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
 
-<div class="absolute top-0 left-0 w-full flex items-center justify-between px-10 py-4 z-20 border-b border-white/60">
-	<img src="{{ url_for('static', filename='eknal_link.png') }}" class="h-8 sm:h-12">
-
-	<div class="flex gap-6 text-sm font-semibold">
-		<a href="/" class="text-indigo-700 hover:text-indigo-500 border-b-2 border-transparent hover:border-indigo-500 transition">Home</a>
-		<a href="/dashboard" class="text-indigo-700 hover:text-indigo-500 border-b-2 border-transparent hover:border-indigo-500 transition">Dashboard</a>
-	</div>
+<!-- Logo -->
+<div class="absolute top-4 left-4 z-20">
+  <img src="{{ url_for('static', filename='eknal_link.png') }}"
+       class="h-8 sm:h-12">
 </div>
 
+<!-- Main Content -->
 <div class="flex-grow flex items-center justify-center px-4 pt-24 pb-12 relative z-10">
 
-<div class="bg-white/80 backdrop-blur rounded-2xl shadow-xl p-8 w-full max-w-md">
+<div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md">
 
-<h2 class="text-2xl font-bold text-indigo-700 text-center mb-2">Create User</h2>
+<h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">
 
-<p class="text-center text-gray-600 mb-3">Create a user account without entering a password.</p>
-<p class="text-center text-sm text-indigo-700 mb-6">A temporary password will be generated automatically and sent to the user's email.</p>
+New User
+</h2>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
-	{% if messages %}
-		<div class="space-y-2 mb-4">
-			{% for category, message in messages %}
-				<div class="rounded-lg px-3 py-2 text-sm {% if category == 'danger' %}bg-red-100 text-red-700{% elif category == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-green-100 text-green-700{% endif %}">
-					{{ message }}
-				</div>
-			{% endfor %}
-		</div>
-	{% endif %}
+{% if messages %}
+<div class="mb-4 space-y-2">
+       {% for category, message in messages %}
+       <div class="px-4 py-2 rounded-lg text-sm
+              {% if category == 'success' %}bg-green-100 text-green-700 border border-green-300{% endif %}
+              {% if category == 'danger' %}bg-red-100 text-red-700 border border-red-300{% endif %}
+              {% if category == 'warning' %}bg-yellow-100 text-yellow-700 border border-yellow-300{% endif %}
+              {% if category not in ['success', 'danger', 'warning'] %}bg-blue-100 text-blue-700 border border-blue-300{% endif %}">
+              {{ message }}
+       </div>
+       {% endfor %}
+</div>
+{% endif %}
 {% endwith %}
 
-<form method="post" class="space-y-4">
-	<input type="text" name="username" required
-	 class="w-full border px-3 py-3 rounded-lg text-center focus:ring-2 focus:ring-indigo-400 outline-none"
-	 placeholder="Username">
+<form method="post" class="space-y-4" id="collabForm">
 
-	<input type="text" name="name" required
-	 class="w-full border px-3 py-3 rounded-lg text-center focus:ring-2 focus:ring-indigo-400 outline-none"
-	 placeholder="Full Name">
+<!-- Name -->
+<div>
+<label class="block text-sm mb-1">Name</label>
+<input type="text" name="name" required autofocus
+       placeholder="Enter full name"
+       class="w-full border px-3 py-2 rounded-lg
+              focus:ring-2 focus:ring-indigo-400 outline-none">
+</div>
 
-	<input type="email" name="email" required
-	 class="w-full border px-3 py-3 rounded-lg text-center focus:ring-2 focus:ring-indigo-400 outline-none"
-	 placeholder="user@example.com">
+<!-- User Name -->
+<div>
+<label class="block text-sm mb-1">User Name</label>
+<input type="text" name="username" required
+       placeholder="Enter user name"
+       class="w-full border px-3 py-2 rounded-lg
+              focus:ring-2 focus:ring-indigo-400 outline-none">
+</div>
 
-	<select name="role_id" required
-	 class="w-full border px-3 py-3 rounded-lg text-center focus:ring-2 focus:ring-indigo-400 outline-none">
-		<option value="" disabled selected>Select Role</option>
-		{% for role in roles %}
-			<option value="{{ role.id }}">{{ role.name }}</option>
-		{% endfor %}
-	</select>
+<!-- Email -->
+<div>
+<label class="block text-sm mb-1">Email</label>
+<input type="email" name="email" required
+       placeholder="example@email.com"
+       class="w-full border px-3 py-2 rounded-lg
+              focus:ring-2 focus:ring-indigo-400 outline-none">
+</div>
 
-	<button id="submitBtn"
-	 class="w-full py-3 rounded-xl font-semibold text-white
-	 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500
-	 hover:from-yellow-500 hover:via-orange-500 hover:to-amber-500
-	 transition flex items-center justify-center gap-2">
-		<span id="btnText">Create User</span>
-		<svg id="spinner" class="hidden w-5 h-5 animate-spin text-white" viewBox="0 0 24 24">
-			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"></circle>
-			<path fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-		</svg>
-	</button>
+
+<!-- Role -->
+<div>
+<label class="block text-sm mb-1">Role</label>
+
+<select name="role_id" required
+class="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none bg-white">
+
+<option value="" disabled selected>Select role</option>
+
+{% for t in roles %}
+
+<option value="{{ t.id }}">
+{{ t.name }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<hr class="my-4">
+
+<!-- Actions -->
+<div class="flex justify-end gap-3">
+
+<a href="/users"
+   class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+Back
+</a>
+
+<button type="submit"
+        class="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500
+               text-white rounded-lg font-semibold">
+New User
+</button>
+
+</div>
+
 </form>
 
 </div>
+
 </div>
 
+<!-- Footer -->
 <footer class="text-center text-gray-500 text-xs sm:text-sm z-10 py-4 mt-auto border-t border-gray-300 w-full px-4">
 <p>
-	Developed by
-	<a href="#" class="text-indigo-600 font-semibold hover:underline">
-		Shalem Raj (Python Intern)
-	</a>
+  Developed by
+  <a href="https://www.linkedin.com/in/shalem-raj-putta-054388295/"
+     target="_blank"
+     class="text-indigo-600 font-semibold hover:underline">
+    Shalem Raj (Python Intern)
+  </a>
+  at
+  <a href="https://eknaltechnologies.in"
+     target="_blank"
+     class="text-indigo-600 font-semibold hover:underline">
+    Eknal Technologies
+  </a>.
 </p>
 </footer>
-
-<script>
-const form = document.querySelector("form");
-const btn = document.getElementById("submitBtn");
-const text = document.getElementById("btnText");
-const spinner = document.getElementById("spinner");
-
-form.addEventListener("submit", () => {
-	btn.disabled = true;
-	btn.classList.add("opacity-70", "cursor-not-allowed");
-	text.textContent = "Creating...";
-	spinner.classList.remove("hidden");
-});
-</script>
-
 </body>
 </html>
