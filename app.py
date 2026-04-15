@@ -14,6 +14,16 @@ from email.mime.text import MIMEText
 from flask_migrate import Migrate
 from sqlalchemy import MetaData
 import random
+import string
+from datetime import datetime
+
+from cryptography.fernet import Fernet
+import base64
+import hashlib
+
+SECRET = Fernet.generate_key()
+cipher = Fernet(SECRET)
+
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -88,7 +98,21 @@ class Collaborator(db.Model):
     linkedin = db.Column(db.String(300), nullable = True)
     github = db.Column(db.String(300), nullable = True)
     source = db.Column(db.String(120), nullable = True)
-    
+
+class User(db.Model):
+    email = db.Column(db.String(120), nullable=False,unique=True)
+    name = db.Column(db.String(120), nullable=False)
+    username = db.Column(db.String(120),primary_key=True,nullable=False)
+    password = db.Column(db.String(255),nullable=False)
+    role_id = db.Column(db.Integer,db.ForeignKey('role.id'))
+    Metadata = db.Column(db.String(300),nullable=True)
+
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    created_at = db.Column(db.String(300),nullable=False)
+    updated_at = db.Column(db.String(300),nullable=False)
+    Metadata = db.Column(db.String(300),nullable=True)
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -440,7 +464,7 @@ def send_user_credentials_email(to, name, username, password):
 
 def generate_temporary_password(length=12):
     alphabet = string.ascii_letters + string.digits
-    return "".join(random.choice(alphabet) for _ in range(length))
+    return ''.join(random.choice(alphabet) for _ in range(length))
 
 def generate_otp():
     return str(random.randint(100000, 999999))
@@ -540,23 +564,6 @@ def self_edit_collaborator():
 
     return render_template("self_edit.html", collaborator=collaborator)
 
-
-@app.route("/user/forgot-password", methods=["GET", "POST"])
-def forgot_password():
-    if request.method == "POST":
-        email = request.form["email"].strip()
-        user = User.query.filter_by(email=email).first()
-        if user:
-            otp = generate_otp()
-            save_otp(email, otp)
-            send_email(email, otp)
-            session["reset_email"] = email
-            flash("OTP sent to your email", "success")
-            return redirect(url_for("reset_password"))
-        flash("Email not found", "danger")
-    return render_template("forgot_password.html")
-
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=False, port = 9123)
-
+    app.run(debug=True, port = 9123)
