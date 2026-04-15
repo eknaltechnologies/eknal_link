@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Contribution Types</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 min-h-screen">
+
+<!-- Toast Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+  {% for category, message in messages %}
+  <div id="toast"
+       class="fixed top-6 left-1/2 -translate-x-1/2 z-50
+              px-7 py-3 rounded-xl shadow-xl
+              bg-white/90 backdrop-blur-md
+              text-gray-800 text-sm font-medium
+              border border-gray-200
+              flex items-center gap-3
+              transform scale-95 translate-y-4 opacity-0
+              transition-all duration-500">
+
+      <!-- Accent bar -->
+      <span class="w-1.5 h-6 rounded-full
+            {% if category=='success' %}bg-green-500
+            {% elif category=='danger' %}bg-red-500
+            {% else %}bg-indigo-500{% endif %}">
+      </span>
+
+      <span>{{ message }}</span>
+
+  </div>
+  {% endfor %}
+{% endif %}
+{% endwith %}
+
+
+<div class="max-w-4xl mx-auto py-10 px-6">
+
+<!-- Header -->
+<div class="flex justify-between items-center mb-6">
+
+<div class="flex items-center gap-4">
+
+<a href="{{ url_for('dashboard') }}"
+class="text-sm text-slate-600 hover:text-indigo-600">
+← Back
+</a>
+
+<h1 class="text-2xl font-semibold">
+Contribution Types
+</h1>
+
+</div>
+
+<a href="{{ url_for('add_contribution_type') }}"
+class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
+Add Type
+</a>
+
+</div>
+
+
+<!-- Table -->
+<div class="bg-white border rounded-xl overflow-hidden">
+
+<table class="w-full text-sm">
+
+<thead class="bg-slate-100">
+<tr>
+<th class="text-left px-5 py-3">Name</th>
+<th class="text-right px-5 py-3">Actions</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for t in types %}
+
+<tr class="border-t">
+
+<td class="px-5 py-3">
+{{ t.name }}
+</td>
+
+<td class="px-5 py-3 text-right space-x-3">
+
+<a href="{{ url_for('edit_contribution_type', id=t.id) }}"
+class="text-amber-600 hover:underline">
+Edit
+</a>
+
+<form action="{{ url_for('delete_contribution_type', id=t.id) }}"
+method="POST"
+class="inline">
+
+<button class="text-red-600 hover:underline"
+onclick="return confirm('Delete this type?')">
+Delete
+</button>
+
+</form>
+
+</td>
+
+</tr>
+
+{% else %}
+
+<tr>
+<td colspan="2" class="text-center py-6 text-slate-500">
+No contribution types added
+</td>
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+<!-- Toast Animation -->
+<script>
+const toast = document.getElementById("toast");
+
+if (toast) {
+  setTimeout(() => {
+    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
+  }, 100);
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+  }, 2500);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+</script>
+
+</body>
+</html>

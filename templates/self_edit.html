@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Profile</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 via-white to-indigo-100 text-gray-900 relative overflow-x-hidden">
+
+<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
+<!-- ================= TOP BAR ================= -->
+<div class="absolute top-0 left-0 w-full flex items-center justify-between
+            px-10 py-4 z-20 border-b border-white/60">
+
+  <!-- Logo -->
+  <img src="{{ url_for('static', filename='eknal_link.png') }}"
+       class="h-8 sm:h-12">
+
+  <!-- Navigation -->
+  <div class="flex gap-6 text-sm font-semibold">
+
+    <a href="/"
+       class="text-indigo-700 hover:text-indigo-500
+              border-b-2 border-transparent
+              hover:border-indigo-500 transition">
+      Home
+    </a>
+
+    <a href="/collaborators"
+       class="text-indigo-700 hover:text-indigo-500
+              border-b-2 border-transparent
+              hover:border-indigo-500 transition">
+      Collaborators
+    </a>
+
+  </div>
+</div>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+  {% for category, message in messages %}
+  <div id="toast"
+       class="fixed top-6 left-1/2 -translate-x-1/2 z-50
+              px-7 py-3 rounded-xl shadow-xl
+              bg-white/90 backdrop-blur-md
+              text-gray-800 text-sm font-medium
+              border border-gray-200
+              flex items-center gap-3
+              transform scale-95 translate-y-4 opacity-0
+              transition-all duration-500">
+
+      <!-- Accent bar -->
+      <span class="w-1.5 h-6 rounded-full
+            {% if category=='success' %}bg-green-500
+            {% elif category=='danger' %}bg-red-500
+            {% else %}bg-indigo-500{% endif %}">
+      </span>
+
+      <span>{{ message }}</span>
+
+  </div>
+  {% endfor %}
+{% endif %}
+{% endwith %}
+<div class="flex-grow flex items-center justify-center px-4 pt-24 pb-12 relative z-10">
+
+<div class="bg-white/80 backdrop-blur rounded-2xl shadow-xl p-8 w-full max-w-md">
+
+<h2 class="text-2xl font-bold text-indigo-700 text-center mb-6">
+Update Your Profile
+</h2>
+<form method="post" class="space-y-4">
+
+<input type="text" name="name" value="{{ collaborator.name }}"
+ class="w-full border px-3 py-2 rounded-lg">
+
+<input type="email" name="email" value="{{ collaborator.email }}"
+ class="w-full border px-3 py-2 rounded-lg">
+
+<input type="url" name="resume"
+ value="{{ collaborator.resume_url }}"
+ class="w-full border px-3 py-2 rounded-lg">
+
+<input type="text" name="contribution"
+ value="{{ collaborator.contribution }}"
+ class="w-full border px-3 py-2 rounded-lg">
+
+<button class="w-full py-3 rounded-xl font-semibold text-white
+ bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500
+ hover:from-yellow-500 hover:via-orange-500 hover:to-amber-500 transition">
+Save Changes
+</button>
+
+</form>
+
+</div>
+
+</div>
+<footer class="text-center text-gray-500 text-xs sm:text-sm z-10 py-4 mt-auto border-t border-gray-300 w-full px-4">
+<p>
+  Developed by
+  <a href="https://www.linkedin.com/in/shalem-raj-putta-054388295/"
+     target="_blank"
+     class="text-indigo-600 font-semibold hover:underline">
+    Shalem Raj (Python Intern)
+  </a>
+  at
+  <a href="https://eknaltechnologies.in"
+     target="_blank"
+     class="text-indigo-600 font-semibold hover:underline">
+    Eknal Technologies
+  </a>.
+</p>
+</footer>
+<script>
+  const toast = document.getElementById("toast");
+
+if (toast) {
+  // Fade & slide in
+  setTimeout(() => {
+    toast.classList.remove("translate-y-4", "opacity-0");
+  }, 100);
+
+  // Fade out
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+  }, 2500);
+
+  // Remove element
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+</script>
+</body>
+</html>

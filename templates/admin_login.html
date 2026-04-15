@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen flex items-center justify-center
+             bg-gradient-to-b from-blue-50 via-white to-indigo-100">
+
+<!-- Background pattern -->
+<div class="absolute inset-0
+     bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]
+     opacity-10 pointer-events-none"></div>
+
+<!-- Card -->
+<div class="bg-white/80 backdrop-blur
+            p-8 rounded-2xl shadow-xl
+            w-full max-w-sm relative z-10">
+
+  <h2 class="text-2xl font-bold text-indigo-700 text-center mb-6">
+    Admin Login
+  </h2>
+
+  <!-- Flash Messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="mb-4 px-4 py-2 rounded
+                    {% if category == 'success' %}
+                      bg-green-100 text-green-700
+                    {% else %}
+                      bg-red-100 text-red-700
+                    {% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <form method="post" class="space-y-4">
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Username</label>
+      <input type="text" name="username" required
+             class="w-full border px-3 py-2 rounded-lg
+                    focus:ring-2 focus:ring-indigo-400 outline-none">
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Password</label>
+      <input type="password" name="password" required
+             class="w-full border px-3 py-2 rounded-lg
+                    focus:ring-2 focus:ring-indigo-400 outline-none">
+    </div>
+
+    <button type="submit"
+            class="w-full py-2 rounded-lg text-white font-semibold
+                   bg-gradient-to-r from-orange-500 to-yellow-500
+                   hover:from-yellow-500 hover:to-orange-500">
+      Login
+    </button>
+
+  </form>
+
+</div>
+<script>
+const toast = document.getElementById("toast");
+
+if (toast) {
+  setTimeout(() => {
+    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
+  }, 100);
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+  }, 2500);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | Eknal Technologies</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="min-h-screen bg-slate-50 text-slate-800">
+
+<!-- ================= HEADER ================= -->
+<header class="bg-white border-b shadow-sm">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+
+    <!-- Left : Logo + Brand -->
+    <div class="flex items-center gap-3">
+      <img src="{{ url_for('static', filename='eknal_link.png') }}" class="h-8">
+      <!-- <span class="font-semibold text-lg text-indigo-600">
+       Eknal Workspace
+      </span> -->
+    </div>
+
+    <!-- Right : Links -->
+    <div class="flex items-center gap-6">
+      <a href="{{ url_for('resources') }}"
+         class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">
+        Home
+      </a>
+
+      <a href="{{ url_for('admin_logout') }}"
+         class="text-sm font-medium text-slate-600 hover:text-red-600 transition">
+        Logout
+      </a>
+    </div>
+
+  </div>
+</header>
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+  {% for category, message in messages %}
+  <div id="toast"
+       class="fixed top-6 left-1/2 -translate-x-1/2 z-50
+              px-7 py-3 rounded-xl shadow-xl
+              bg-white/90 backdrop-blur-md
+              text-gray-800 text-sm font-medium
+              border border-gray-200
+              flex items-center gap-3
+              transform scale-95 translate-y-4 opacity-0
+              transition-all duration-500">
+
+      <!-- Accent bar -->
+      <span class="w-1.5 h-6 rounded-full
+            {% if category=='success' %}bg-green-500
+            {% elif category=='danger' %}bg-red-500
+            {% else %}bg-indigo-500{% endif %}">
+      </span>
+
+      <span>{{ message }}</span>
+
+  </div>
+  {% endfor %}
+{% endif %}
+{% endwith %}
+<!-- ================= MAIN ================= -->
+<main class="max-w-7xl mx-auto px-6 py-10">
+
+<!-- Page Title -->
+<div class="mb-8">
+  <h1 class="text-2xl font-semibold">Dashboard</h1>
+  <p class="text-slate-500 text-sm">Manage links, files, and collaborators</p>
+</div>
+
+<!-- ================= QUICK ACTIONS ================= -->
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-10">
+
+  <a href="{{ url_for('add_link') }}"
+     class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+    <p class="text-sm text-slate-500">Create</p>
+    <h3 class="font-semibold text-lg mt-1">Add Link</h3>
+  </a>
+
+  <a href="{{ url_for('add_file') }}"
+     class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+    <p class="text-sm text-slate-500">Upload</p>
+    <h3 class="font-semibold text-lg mt-1">Add File</h3>
+  </a>
+
+  <a href="/add-collaborator"
+     class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+    <p class="text-sm text-slate-500">Manage</p>
+    <h3 class="font-semibold text-lg mt-1">Add Collaborator</h3>
+  </a>
+
+  <a href="{{ url_for('contribution_types') }}"
+   class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+  <p class="text-sm text-slate-500">Manage</p>
+  <h3 class="font-semibold text-lg mt-1">Contribution Types</h3>
+</a>
+
+</div>
+
+<!-- ================= LINKS ================= -->
+<section class="mb-12">
+
+<h2 class="text-lg font-semibold mb-4">Links</h2>
+
+<div class="bg-white border rounded-xl overflow-hidden">
+
+<table class="w-full text-sm">
+<thead class="bg-slate-100">
+<tr>
+  <th class="text-left px-5 py-3">Title</th>
+  <th class="text-right px-5 py-3">Actions</th>
+</tr>
+</thead>
+
+<tbody>
+{% for link in links %}
+<tr class="border-t">
+
+  <td class="px-5 py-3">
+    {{ link.title }}
+  </td>
+
+  <td class="px-5 py-3 text-right space-x-3">
+
+    <a href="{{ link.url }}" target="_blank"
+       class="text-indigo-600 hover:underline">
+      Open
+    </a>
+
+    <a href="{{ url_for('edit_link', id=link.id) }}"
+       class="text-amber-600 hover:underline">
+      Edit
+    </a>
+
+    <form action="{{ url_for('delete_link', id=link.id) }}"
+          method="post"
+          class="inline">
+
+      <button class="text-red-600 hover:underline"
+              onclick="return confirm('Delete this link?')">
+        Delete
+      </button>
+
+    </form>
+
+  </td>
+
+</tr>
+{% else %}
+<tr>
+  <td colspan="2" class="px-5 py-6 text-center text-slate-500">
+    No links added
+  </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+</div>
+</section>
+
+<!-- ================= FILES ================= -->
+<section>
+
+<h2 class="text-lg font-semibold mb-4">Files</h2>
+
+<div class="bg-white border rounded-xl overflow-hidden">
+
+<table class="w-full text-sm">
+<thead class="bg-slate-100">
+<tr>
+  <th class="text-left px-5 py-3">Title</th>
+  <th class="text-right px-5 py-3">Actions</th>
+</tr>
+</thead>
+
+<tbody>
+{% for file in files %}
+<tr class="border-t">
+
+  <td class="px-5 py-3">
+    {{ file.title }}
+  </td>
+
+  <td class="px-5 py-3 text-right space-x-3">
+
+  <a href="{{ url_for('download', id=file.id) }}"
+     class="text-indigo-600 hover:underline">
+    Download
+  </a>
+
+  <a href="{{ url_for('edit_file', id=file.id) }}"
+     class="text-amber-600 hover:underline">
+    Edit
+  </a>
+ <!-- Preview -->
+  <!-- <a href="{{ url_for('preview_file', id=file.id) }}"
+     target="_blank"
+     class="text-indigo-600 hover:underline">
+    Preview
+  </a> -->
+
+  <form action="{{ url_for('delete_file', id=file.id) }}"
+        method="post"
+        class="inline">
+
+    <button class="text-red-600 hover:underline"
+            onclick="return confirm('Delete this file?')">
+      Delete
+    </button>
+
+  </form>
+
+</td>
+</tr>
+{% else %}
+<tr>
+  <td colspan="2" class="px-5 py-6 text-center text-slate-500">
+    No files uploaded
+  </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+</div>
+
+</section>
+
+</main>
+<footer class="text-center text-gray-500 text-xs sm:text-sm z-10 py-4 mt-auto border-t border-gray-300 w-full px-4">
+<p>
+  Developed by
+  <a href="https://www.linkedin.com/in/shalem-raj-putta-054388295/"
+     target="_blank"
+     class="text-indigo-600 font-semibold hover:underline">
+    Shalem Raj (Python Intern)
+  </a>
+  at
+  <a href="https://eknaltechnologies.in"
+     target="_blank"
+     class="text-indigo-600 font-semibold hover:underline">
+    Eknal Technologies
+  </a>.
+</p>
+</footer>
+<script>
+const toast = document.getElementById("toast");
+
+if (toast) {
+  setTimeout(() => {
+    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
+  }, 100);
+
+  setTimeout(() => {
+    toast.classList.add("opacity-0");
+  }, 2500);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+</script>
+</body>
+</html>
