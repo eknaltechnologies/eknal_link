@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Eknal Link | New Collaborator</title>
+  <title>Eknal Link | New User</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -26,7 +26,7 @@
 
 <h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">
 
-Login Now
+New User
 </h2>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -47,28 +47,69 @@ Login Now
 
 <form method="post" class="space-y-4" id="collabForm">
 
+<!-- Name -->
+<div>
+<label class="block text-sm mb-1">Name</label>
+<input type="text" name="name" required autofocus
+       placeholder="Enter full name"
+       class="w-full border px-3 py-2 rounded-lg
+              focus:ring-2 focus:ring-indigo-400 outline-none">
+</div>
+
 <!-- User Name -->
 <div>
 <label class="block text-sm mb-1">User Name</label>
-<input type="text" name="username" required autofocus
+<input type="text" name="username" required
        placeholder="Enter user name"
        class="w-full border px-3 py-2 rounded-lg
               focus:ring-2 focus:ring-indigo-400 outline-none">
 </div>
 
-<!-- Password -->
+<!-- Email -->
 <div>
-<label class="block text-sm mb-1">Password</label>
-<input type="password" name="password" required
-       placeholder="Enter password"
+<label class="block text-sm mb-1">Email</label>
+<input type="email" name="email" required
+       placeholder="example@email.com"
        class="w-full border px-3 py-2 rounded-lg
               focus:ring-2 focus:ring-indigo-400 outline-none">
 </div>
 
+
+<!-- Role -->
+<div>
+<label class="block text-sm mb-1">Role</label>
+
+<select name="role_id" required
+class="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none bg-white">
+
+<option value="" disabled selected>Select role</option>
+
+{% for t in roles %}
+
+<option value="{{ t.id }}">
+{{ t.name }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+<hr class="my-4">
+
+<!-- Actions -->
+<div class="flex justify-end gap-3">
+
+<a href="/users"
+   class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+Back
+</a>
+
 <button type="submit"
         class="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500
                text-white rounded-lg font-semibold">
-Login
+New User
 </button>
 
 </div>

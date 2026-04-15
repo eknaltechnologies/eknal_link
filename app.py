@@ -16,13 +16,7 @@ from sqlalchemy import MetaData
 import random
 import string
 from datetime import datetime
-
-from cryptography.fernet import Fernet
-import base64
-import hashlib
-
-SECRET = Fernet.generate_key()
-cipher = Fernet(SECRET)
+from werkzeug.security import generate_password_hash, check_password_hash
 
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
@@ -563,6 +557,103 @@ def self_edit_collaborator():
         return redirect(url_for("collaborators"))
 
     return render_template("self_edit.html", collaborator=collaborator)
+
+# ---------------- Roles ----------------
+
+@app.route("/create-role", methods=["GET","POST"])
+@admin_required
+def create_role():
+    if request.method == "POST":
+        name = request.form["role_name"]
+        description = request.form.get("description", "").strip()
+        selected_access = request.form.getlist("access")
+        valid_access = {"read", "write", "update", "delete"}
+        selected_access = [perm for perm in selected_access if perm in valid_access]
+
+        if not name:
+            flash("Role name cannot be empty", "danger")
+            return redirect(url_for("create_role"))
+
+        if not selected_access:
+            flash("Select at least one access permission", "danger")
+            return redirect(url_for("create_role"))
+
+        if not description:
+            flash("Description cannot be empty", "danger")
+            return redirect(url_for("create_role"))
+
+        now = current_timestamp()
+        role_metadata = json.dumps({"description": description, "access": selected_access})
+        new_role = Role(name=name, created_at=now, updated_at=now, Metadata=role_metadata)
+        db.session.add(new_role)
+        db.session.commit()
+        flash("Role created successfully", "success")
+        return redirect(url_for("dashboard"))
+    return render_template("create_role.html")
+
+# ---------------- Users ----------------
+@app.route("/create-users", methods=["GET","POST"])
+@admin_required
+def create_user():
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        name = request.form["name"]
+        role_id = request.form["role_id"]
+
+        if not all([username, email, name, role_id]):
+            flash("All fields are required", "danger")
+            return redirect(url_for("create_user"))
+
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists", "danger")
+            return redirect(url_for("create_user"))
+
+        if User.query.filter_by(email=email).first():
+            flash("Email already exists", "danger")
+            return redirect(url_for("create_user"))
+
+        generated_password = generate_temporary_password()
+        encrypted_password = generate_password_hash(generated_password)
+
+        new_user = User(
+            username=username,
+            password=encrypted_password,
+            email=email,
+            name=name,
+            role_id=int(role_id),
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        try:
+            send_user_credentials_email(
+                to=email,
+                name=name,
+                username=username,
+                password=generated_password,
+            )
+            flash("User created and credentials sent by email", "success")
+        except Exception:
+            app.logger.exception("Failed to send user credentials email")
+            flash("User created, but failed to send credentials email", "warning")
+
+        return redirect(url_for("resources"))
+
+    roles = Role.query.all()
+    return render_template("create_user.html", roles=roles)
+
+@app.route("/user-login", methods=["GET","POST"])
+def login_user():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        current_user = User.query.filter_by(username=username).first()
+        if current_user and check_password_hash(current_user.password, password):
+            session["user"] = current_user.username
+            flash("Login successful", "success")
+            return redirect(url_for("dashboard"))
+    return render_template("user_login.html")
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
