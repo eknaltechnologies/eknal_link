@@ -98,7 +98,7 @@ class Collaborator(db.Model):
     linkedin = db.Column(db.String(300), nullable = True)
     github = db.Column(db.String(300), nullable = True)
     source = db.Column(db.String(120), nullable = True)
-
+    
 class User(db.Model):
     email = db.Column(db.String(120), nullable=False,unique=True)
     name = db.Column(db.String(120), nullable=False)
