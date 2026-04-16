@@ -640,7 +640,7 @@ def create_user():
             app.logger.exception("Failed to send user credentials email")
             flash("User created, but failed to send credentials email", "warning")
 
-        return redirect(url_for("resources"))
+        return redirect(url_for("dashboard"))
 
     roles = Role.query.all()
     return render_template("create_user.html", roles=roles)
@@ -652,7 +652,7 @@ def login_user():
         username = request.form.get("username")
         password = request.form.get("password")
 
-        #  validation
+       
         if not username or not password:
             flash("Please enter both username and password", "danger")
             return render_template("user_login.html")
