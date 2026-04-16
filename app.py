@@ -444,6 +444,8 @@ def send_user_credentials_email(to, name, username, password):
         <p><strong>Username:</strong> {username}</p>
         <p><strong>Password:</strong> {password}</p>
         <p>Please log in and change your password after first login.</p>
+        <a href="{url_for('login_user', _external=True)}" 
+           style="display:inline-block; background-color:#4CAF50; color:white; padding:10px 20px; border-radius:5px; text-decoration:none;">Login</a>
         """,
         subtype="html",
     )
@@ -643,17 +645,113 @@ def create_user():
     roles = Role.query.all()
     return render_template("create_user.html", roles=roles)
 
+
 @app.route("/user-login", methods=["GET","POST"])
 def login_user():
     if request.method == "POST":
-        username = request.form["username"]
-        password = request.form["password"]
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        #  validation
+        if not username or not password:
+            flash("Please enter both username and password", "danger")
+            return render_template("user_login.html")
+
+        print("USERNAME:", username)
+        print("PASSWORD:", password)
+
         current_user = User.query.filter_by(username=username).first()
+
+        if current_user:
+            print("USER FOUND")
+            print("DB PASSWORD HASH:", current_user.password)
+        else:
+            print("USER NOT FOUND")
+
         if current_user and check_password_hash(current_user.password, password):
+            print("PASSWORD MATCH ")
+
             session["user"] = current_user.username
             flash("Login successful", "success")
-            return redirect(url_for("dashboard"))
+            return redirect(url_for("resources"))
+
+        print("PASSWORD MISMATCH ")
+        flash("Invalid username or password", "danger")
+
     return render_template("user_login.html")
+
+@app.route("/user/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form["email"].strip()
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            otp = generate_otp()
+            save_otp(email, otp)
+            send_email(email, otp)
+
+            session["otp_email"] = email
+
+            flash("OTP sent to your email", "success")
+            return redirect(url_for("verify_otpUser"))
+
+        flash("Email not found", "danger")
+
+    return render_template("forget_password.html")
+
+@app.route("/verify_otpUser", methods=["GET", "POST"])
+def verify_otpUser():
+    if request.method == "POST":
+        user_otp = request.form.get("otp")
+        email = session.get("otp_email")  
+
+        if not email:
+            flash("Session expired", "danger")
+            return redirect(url_for("forgot_password"))
+
+        saved_otp = redis_client.get(f"otp:{email}")
+
+        if saved_otp is None:
+            flash("OTP expired", "danger")
+            return redirect(url_for("forgot_password"))  
+
+        
+        if user_otp == saved_otp:
+            redis_client.delete(f"otp:{email}")
+            session["verified_email"] = email
+
+            flash("OTP verified successfully.", "success")
+            return redirect(url_for("change_password"))
+
+        flash("Incorrect OTP. Please try again.", "danger")
+
+    return render_template("Verify_otpUser.html") 
+
+@app.route("/change-password", methods=["GET", "POST"])
+def change_password():
+    email = session.get("verified_email")
+
+    if not email:
+        flash("Unauthorized access", "danger")
+        return redirect(url_for("forgot_password"))
+
+    user = User.query.filter_by(email=email).first_or_404()
+
+    if request.method == "POST":
+        new_password = request.form["New_password"]
+
+        user.password = generate_password_hash(new_password)
+        db.session.commit()
+
+      
+        session.pop("verified_email", None)
+        session.pop("otp_email", None)
+
+        flash("Password changed successfully", "success")
+        return redirect(url_for("login_user"))
+
+    return render_template("reset_password.html")
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
