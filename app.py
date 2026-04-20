@@ -120,6 +120,16 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated
 
+def require_password_change(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        username = session.get("user")
+        if username and redis_client.exists(f"first_login:{username}"):
+            flash("Please change your temporary password before continuing.", "warning")
+            return redirect(url_for("change_password"))
+        return f(*args, **kwargs)
+    return decorated
+
 # ---------------- HOME ----------------
 @app.route("/")
 def home():
@@ -160,6 +170,7 @@ def admin_logout():
 
 # ---------------- PUBLIC RESOURCES ----------------
 @app.route("/resources")
+@require_password_change
 def resources():
     links = Link.query.all()
     files = FileUpload.query.all()
@@ -231,7 +242,7 @@ def add_file():
         db.session.commit()
 
         flash("File uploaded", "success")
-        return redirect(url_for("dashboard"))
+    return redirect(url_for("dashboard"))
 
     return render_template("add_file.html")
 @app.route("/edit-file/<int:id>", methods=["GET", "POST"])
@@ -344,7 +355,7 @@ def add_collaborator():
         )
         db.session.add(collaborator)
         db.session.commit()
-
+        
         try:
             send_collaborator_added_email(collaborator.email, collaborator.name)
         except Exception:
@@ -534,7 +545,7 @@ def verify_otp():
         flash("Incorrect OTP. Please try again.", "danger")
 
     return render_template("verify_otp.html")
-#edit
+
 @app.route("/self-edit", methods=["GET", "POST"])
 def self_edit_collaborator():
     email = session.get("verified_email")
@@ -583,7 +594,7 @@ def create_role():
         if not description:
             flash("Description cannot be empty", "danger")
             return redirect(url_for("create_role"))
-
+        
         now = current_timestamp()
         role_metadata = json.dumps({"description": description, "access": selected_access})
         new_role = Role(name=name, created_at=now, updated_at=now, Metadata=role_metadata)
@@ -593,7 +604,7 @@ def create_role():
         return redirect(url_for("dashboard"))
     return render_template("create_role.html")
 
-# ---------------- Users ----------------
+# ----------------  Create Users ----------------
 @app.route("/create-users", methods=["GET","POST"])
 @admin_required
 def create_user():
@@ -616,11 +627,12 @@ def create_user():
             return redirect(url_for("create_user"))
 
         generated_password = generate_temporary_password()
-        encrypted_password = generate_password_hash(generated_password)
+
+        redis_client.setex(f"temp_pass:{username}", 86400, generated_password)
 
         new_user = User(
             username=username,
-            password=encrypted_password,
+            password="",  
             email=email,
             name=name,
             role_id=int(role_id),
@@ -640,49 +652,52 @@ def create_user():
             app.logger.exception("Failed to send user credentials email")
             flash("User created, but failed to send credentials email", "warning")
 
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("resources"))
 
     roles = Role.query.all()
     return render_template("create_user.html", roles=roles)
 
+# ----------------  Users_login ----------------
 
 @app.route("/user-login", methods=["GET","POST"])
 def login_user():
     if request.method == "POST":
+        
         username = request.form.get("username")
         password = request.form.get("password")
 
-       
         if not username or not password:
             flash("Please enter both username and password", "danger")
             return render_template("user_login.html")
 
-        print("USERNAME:", username)
-        print("PASSWORD:", password)
-
         current_user = User.query.filter_by(username=username).first()
 
         if current_user:
-            print("USER FOUND")
-            print("DB PASSWORD HASH:", current_user.password)
-        else:
-            print("USER NOT FOUND")
+            
+            if current_user.password and check_password_hash(current_user.password, password):
+                session["user"] = current_user.username
+                flash("Login successful", "success")
+                return redirect(url_for("resources"))
 
-        if current_user and check_password_hash(current_user.password, password):
-            print("PASSWORD MATCH ")
-
-            session["user"] = current_user.username
-            flash("Login successful", "success")
-            return redirect(url_for("resources"))
-
-        print("PASSWORD MISMATCH ")
+        
+            temp_pass = redis_client.get(f"temp_pass:{username}")
+            if password == temp_pass:
+                session["user"] = current_user.username
+                redis_client.setex(f"first_login:{username}", 900, "true")
+                session["verified_email"] = current_user.email
+                flash("Please change your temporary password before continuing.", "warning")
+                return redirect(url_for("change_password"))
         flash("Invalid username or password", "danger")
 
     return render_template("user_login.html")
 
+
+# ----------------  Forget Password  ----------------
+
 @app.route("/user/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
+        breakpoint()
         email = request.form["email"].strip()
         user = User.query.filter_by(email=email).first()
 
@@ -699,6 +714,8 @@ def forgot_password():
         flash("Email not found", "danger")
 
     return render_template("forget_password.html")
+
+# ----------------  Verify OTP User ----------------
 
 @app.route("/verify_otpUser", methods=["GET", "POST"])
 def verify_otpUser():
@@ -728,6 +745,8 @@ def verify_otpUser():
 
     return render_template("Verify_otpUser.html") 
 
+# ----------------  Change Password ----------------
+
 @app.route("/change-password", methods=["GET", "POST"])
 def change_password():
     email = session.get("verified_email")
@@ -744,15 +763,17 @@ def change_password():
         user.password = generate_password_hash(new_password)
         db.session.commit()
 
-      
+        redis_client.delete(f"first_login:{user.username}")
+        redis_client.delete(f"temp_pass:{user.username}")
+
         session.pop("verified_email", None)
         session.pop("otp_email", None)
 
-        flash("Password changed successfully", "success")
+        flash("Password changed successfully. Please log in.", "success")
         return redirect(url_for("login_user"))
 
     return render_template("reset_password.html")
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True, port = 9123)
+    app.run(debug=False, port = 9123)

@@ -29,7 +29,7 @@
 New User
 </h2>
 
-<!-- {% with messages = get_flashed_messages(with_categories=true) %}
+{% with messages = get_flashed_messages(with_categories=true) %}
 {% if messages %}
 <div class="mb-4 space-y-2">
        {% for category, message in messages %}
@@ -43,7 +43,7 @@ New User
        {% endfor %}
 </div>
 {% endif %}
-{% endwith %} -->
+{% endwith %}
 
 <form method="post" class="space-y-4" id="collabForm">
 
@@ -101,7 +101,7 @@ class="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-400 out
 <!-- Actions -->
 <div class="flex justify-end gap-3">
 
-<a href="/users"
+<a href="/dashboard"
    class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
 Back
 </a>
