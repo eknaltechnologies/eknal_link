@@ -749,31 +749,38 @@ def verify_otpUser():
 
 @app.route("/change-password", methods=["GET", "POST"])
 def change_password():
-    email = session.get("verified_email")
+        email = session.get("verified_email")
 
-    if not email:
-        flash("Unauthorized access", "danger")
-        return redirect(url_for("forgot_password"))
+        if not email:
+            flash("Unauthorized access", "danger")
+            return redirect(url_for("forgot_password"))
 
-    user = User.query.filter_by(email=email).first_or_404()
+        user = User.query.filter_by(email=email).first_or_404()
 
-    if request.method == "POST":
-        new_password = request.form["New_password"]
+        if request.method == "POST":
+            new_password = request.form["New_password"]
+            confirm_password = request.form["confirm_password"]
 
-        user.password = generate_password_hash(new_password)
-        db.session.commit()
+            if new_password != confirm_password:
+                flash("Passwords do not match", "danger")
+                return render_template("reset_password.html")
+            
+            user.password = generate_password_hash(new_password)
+            db.session.commit()
+            
+            redis_client.delete(f"first_login:{user.username}")
+            redis_client.delete(f"temp_pass:{user.username}")
 
-        redis_client.delete(f"first_login:{user.username}")
-        redis_client.delete(f"temp_pass:{user.username}")
+            session.pop("verified_email", None)
+            session.pop("otp_email", None)
 
-        session.pop("verified_email", None)
-        session.pop("otp_email", None)
+            flash("Password changed successfully. Please log in.", "success")
+            return redirect(url_for("login_user"))
 
-        flash("Password changed successfully. Please log in.", "success")
-        return redirect(url_for("login_user"))
 
-    return render_template("reset_password.html")
+        return render_template("reset_password.html")
 
+   
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=False, port = 9123)
