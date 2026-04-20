@@ -697,7 +697,7 @@ def login_user():
 @app.route("/user/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
-        breakpoint()
+
         email = request.form["email"].strip()
         user = User.query.filter_by(email=email).first()
 
