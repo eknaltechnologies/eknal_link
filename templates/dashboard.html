@@ -15,10 +15,7 @@
 
     <!-- Left : Logo + Brand -->
     <div class="flex items-center gap-3">
-      <img src="{{ url_for('static', filename='eknal_link.png') }}" class="h-8">
-      <!-- <span class="font-semibold text-lg text-indigo-600">
-       Eknal Workspace
-      </span> -->
+      <img src="{{ url_for('static', filename='eknal_link.png') }}" class="h-8" alt="">
     </div>
 
     <!-- Right : Links -->
@@ -97,6 +94,18 @@
   <p class="text-sm text-slate-500">Manage</p>
   <h3 class="font-semibold text-lg mt-1">Contribution Types</h3>
 </a>
+
+<a href="/create-role"
+     class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+    <p class="text-sm text-slate-500">User</p>
+    <h3 class="font-semibold text-lg mt-1">create roles</h3>
+  </a>
+
+  <a href="/create-users"
+     class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+    <p class="text-sm text-slate-500">User</p>
+    <h3 class="font-semibold text-lg mt-1">Create Users</h3>
+  </a>
 
 </div>
 
@@ -196,12 +205,6 @@
      class="text-amber-600 hover:underline">
     Edit
   </a>
- <!-- Preview -->
-  <!-- <a href="{{ url_for('preview_file', id=file.id) }}"
-     target="_blank"
-     class="text-indigo-600 hover:underline">
-    Preview
-  </a> -->
 
   <form action="{{ url_for('delete_file', id=file.id) }}"
         method="post"

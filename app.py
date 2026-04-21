@@ -1,5 +1,6 @@
 import os
 import re
+import json
 from flask import Flask, render_template, redirect, url_for, request, flash, session, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.utils import secure_filename
@@ -13,6 +14,10 @@ from email.mime.text import MIMEText
 from flask_migrate import Migrate
 from sqlalchemy import MetaData
 import random
+import string
+from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -88,6 +93,20 @@ class Collaborator(db.Model):
     github = db.Column(db.String(300), nullable = True)
     source = db.Column(db.String(120), nullable = True)
     
+class User(db.Model):
+    email = db.Column(db.String(120), nullable=False,unique=True)
+    name = db.Column(db.String(120), nullable=False)
+    username = db.Column(db.String(120),primary_key=True,nullable=False)
+    password = db.Column(db.String(255),nullable=False)
+    role_id = db.Column(db.Integer,db.ForeignKey('role.id'))
+    Metadata = db.Column(db.String(300),nullable=True)
+
+class Role(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    created_at = db.Column(db.String(300),nullable=False)
+    updated_at = db.Column(db.String(300),nullable=False)
+    Metadata = db.Column(db.String(300),nullable=True)
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -98,6 +117,16 @@ def admin_required(f):
         if not session.get("is_admin"):
             flash("Admin access only", "danger")
             return redirect(url_for("admin_login"))
+        return f(*args, **kwargs)
+    return decorated
+
+def require_password_change(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        username = session.get("user")
+        if username and redis_client.exists(f"first_login:{username}"):
+            flash("Please change your temporary password before continuing.", "warning")
+            return redirect(url_for("change_password"))
         return f(*args, **kwargs)
     return decorated
 
@@ -141,6 +170,7 @@ def admin_logout():
 
 # ---------------- PUBLIC RESOURCES ----------------
 @app.route("/resources")
+@require_password_change
 def resources():
     links = Link.query.all()
     files = FileUpload.query.all()
@@ -212,7 +242,7 @@ def add_file():
         db.session.commit()
 
         flash("File uploaded", "success")
-        return redirect(url_for("dashboard"))
+    return redirect(url_for("dashboard"))
 
     return render_template("add_file.html")
 @app.route("/edit-file/<int:id>", methods=["GET", "POST"])
@@ -325,7 +355,7 @@ def add_collaborator():
         )
         db.session.add(collaborator)
         db.session.commit()
-
+        
         try:
             send_collaborator_added_email(collaborator.email, collaborator.name)
         except Exception:
@@ -413,8 +443,42 @@ def send_collaborator_added_email(to, name):
     server.send_message(msg)
     server.quit()
 
+def send_user_credentials_email(to, name, username, password):
+    msg = EmailMessage()
+    msg["From"] = os.getenv("EMAIL_FROM")
+    msg["To"] = to
+    msg["Subject"] = "Your Eknal Link account credentials"
+    msg.add_alternative(
+        f"""
+        <h3>Hello {name},</h3>
+        <p>Your account has been created successfully.</p>
+        <p><strong>Username:</strong> {username}</p>
+        <p><strong>Password:</strong> {password}</p>
+        <p>Please log in and change your password after first login.</p>
+        <a href="{url_for('login_user', _external=True)}" 
+           style="display:inline-block; background-color:#4CAF50; color:white; padding:10px 20px; border-radius:5px; text-decoration:none;">Login</a>
+        """,
+        subtype="html",
+    )
+    server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
+    server.starttls()
+    server.login(
+        os.getenv("EMAIL_USER"),
+        os.getenv("EMAIL_PASS")
+    )
+    server.send_message(msg)
+    server.quit()
+
+def generate_temporary_password(length=12):
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(random.choice(alphabet) for _ in range(length))
+
 def generate_otp():
     return str(random.randint(100000, 999999))
+
+
+def current_timestamp():
+    return datetime.utcnow().isoformat(sep=" ", timespec="seconds")
 
 def save_otp(email, otp):
     redis_client.setex(f"otp:{email}", 300, otp)
@@ -481,7 +545,7 @@ def verify_otp():
         flash("Incorrect OTP. Please try again.", "danger")
 
     return render_template("verify_otp.html")
-#edit
+
 @app.route("/self-edit", methods=["GET", "POST"])
 def self_edit_collaborator():
     email = session.get("verified_email")
@@ -507,7 +571,216 @@ def self_edit_collaborator():
 
     return render_template("self_edit.html", collaborator=collaborator)
 
+# ---------------- Roles ----------------
+
+@app.route("/create-role", methods=["GET","POST"])
+@admin_required
+def create_role():
+    if request.method == "POST":
+        name = request.form["role_name"]
+        description = request.form.get("description", "").strip()
+        selected_access = request.form.getlist("access")
+        valid_access = {"read", "write", "update", "delete"}
+        selected_access = [perm for perm in selected_access if perm in valid_access]
+
+        if not name:
+            flash("Role name cannot be empty", "danger")
+            return redirect(url_for("create_role"))
+
+        if not selected_access:
+            flash("Select at least one access permission", "danger")
+            return redirect(url_for("create_role"))
+
+        if not description:
+            flash("Description cannot be empty", "danger")
+            return redirect(url_for("create_role"))
+        
+        now = current_timestamp()
+        role_metadata = json.dumps({"description": description, "access": selected_access})
+        new_role = Role(name=name, created_at=now, updated_at=now, Metadata=role_metadata)
+        db.session.add(new_role)
+        db.session.commit()
+        flash("Role created successfully", "success")
+        return redirect(url_for("dashboard"))
+    return render_template("create_role.html")
+
+# ----------------  Create Users ----------------
+@app.route("/create-users", methods=["GET","POST"])
+@admin_required
+def create_user():
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        name = request.form["name"]
+        role_id = request.form["role_id"]
+
+        if not all([username, email, name, role_id]):
+            flash("All fields are required", "danger")
+            return redirect(url_for("create_user"))
+
+        if User.query.filter_by(username=username).first():
+            flash("Username already exists", "danger")
+            return redirect(url_for("create_user"))
+
+        if User.query.filter_by(email=email).first():
+            flash("Email already exists", "danger")
+            return redirect(url_for("create_user"))
+
+        generated_password = generate_temporary_password()
+
+        redis_client.setex(f"temp_pass:{username}", 86400, generated_password)
+
+        new_user = User(
+            username=username,
+            password="",  
+            email=email,
+            name=name,
+            role_id=int(role_id),
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        try:
+            send_user_credentials_email(
+                to=email,
+                name=name,
+                username=username,
+                password=generated_password,
+            )
+            flash("User created and credentials sent by email", "success")
+        except Exception:
+            app.logger.exception("Failed to send user credentials email")
+            flash("User created, but failed to send credentials email", "warning")
+
+        return redirect(url_for("resources"))
+
+    roles = Role.query.all()
+    return render_template("create_user.html", roles=roles)
+
+# ----------------  Users_login ----------------
+
+@app.route("/user-login", methods=["GET","POST"])
+def login_user():
+    if request.method == "POST":
+        
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        if not username or not password:
+            flash("Please enter both username and password", "danger")
+            return render_template("user_login.html")
+
+        current_user = User.query.filter_by(username=username).first()
+
+        if current_user:
+            
+            if current_user.password and check_password_hash(current_user.password, password):
+                session["user"] = current_user.username
+                flash("Login successful", "success")
+                return redirect(url_for("resources"))
+
+        
+            temp_pass = redis_client.get(f"temp_pass:{username}")
+            if password == temp_pass:
+                session["user"] = current_user.username
+                redis_client.setex(f"first_login:{username}", 900, "true")
+                session["verified_email"] = current_user.email
+                flash("Please change your temporary password before continuing.", "warning")
+                return redirect(url_for("change_password"))
+        flash("Invalid username or password", "danger")
+
+    return render_template("user_login.html")
+
+
+# ----------------  Forget Password  ----------------
+
+@app.route("/user/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+
+        email = request.form["email"].strip()
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            otp = generate_otp()
+            save_otp(email, otp)
+            send_email(email, otp)
+
+            session["otp_email"] = email
+
+            flash("OTP sent to your email", "success")
+            return redirect(url_for("verify_otpUser"))
+
+        flash("Email not found", "danger")
+
+    return render_template("forget_password.html")
+
+# ----------------  Verify OTP User ----------------
+
+@app.route("/verify_otpUser", methods=["GET", "POST"])
+def verify_otpUser():
+    if request.method == "POST":
+        user_otp = request.form.get("otp")
+        email = session.get("otp_email")  
+
+        if not email:
+            flash("Session expired", "danger")
+            return redirect(url_for("forgot_password"))
+
+        saved_otp = redis_client.get(f"otp:{email}")
+
+        if saved_otp is None:
+            flash("OTP expired", "danger")
+            return redirect(url_for("forgot_password"))  
+
+        
+        if user_otp == saved_otp:
+            redis_client.delete(f"otp:{email}")
+            session["verified_email"] = email
+
+            flash("OTP verified successfully.", "success")
+            return redirect(url_for("change_password"))
+
+        flash("Incorrect OTP. Please try again.", "danger")
+
+    return render_template("Verify_otpUser.html") 
+
+# ----------------  Change Password ----------------
+
+@app.route("/change-password", methods=["GET", "POST"])
+def change_password():
+        email = session.get("verified_email")
+
+        if not email:
+            flash("Unauthorized access", "danger")
+            return redirect(url_for("forgot_password"))
+
+        user = User.query.filter_by(email=email).first_or_404()
+
+        if request.method == "POST":
+            new_password = request.form["New_password"]
+            confirm_password = request.form["confirm_password"]
+
+            if new_password != confirm_password:
+                flash("Passwords do not match", "danger")
+                return render_template("reset_password.html")
+            
+            user.password = generate_password_hash(new_password)
+            db.session.commit()
+            
+            redis_client.delete(f"first_login:{user.username}")
+            redis_client.delete(f"temp_pass:{user.username}")
+
+            session.pop("verified_email", None)
+            session.pop("otp_email", None)
+
+            flash("Password changed successfully. Please log in.", "success")
+            return redirect(url_for("login_user"))
+
+
+        return render_template("reset_password.html")
+
+   
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=False, port = 9123)
-
