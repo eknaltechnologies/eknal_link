@@ -763,7 +763,7 @@ def change_password():
 
             if new_password != confirm_password:
                 flash("Passwords do not match", "danger")
-                return render_template("reset_password.html")
+                return render_template("Reset_password.html")
             
             user.password = generate_password_hash(new_password)
             db.session.commit()
@@ -778,7 +778,7 @@ def change_password():
             return redirect(url_for("login_user"))
 
 
-        return render_template("reset_password.html")
+        return render_template("Reset_password.html")
 
    
 # ---------------- RUN ----------------
