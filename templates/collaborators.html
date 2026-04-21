@@ -213,7 +213,7 @@ onsubmit="return confirm('Delete {{ c.name }}?')">
 
 <!-- SOCIAL -->
 
-{% if c.linkedin.strip() or c.github.strip() %}
+{% if c.linkedin or c.github %}
 <div class="flex items-center gap-3 mt-4">
 
 {% if c.linkedin %}
