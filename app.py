@@ -226,25 +226,26 @@ def delete_link(id):
 @admin_required
 def add_file():
     if request.method == "POST":
-        file = request.files.get("file")
-        
-        if not file or file.filename == '' or not allowed_file(file.filename):
-            flash("No file selected or invalid file type", "danger")
-            return redirect(url_for("add_file"))
+            file = request.files.get("file")
+            
+            if not file or file.filename == '' or not allowed_file(file.filename):
+                flash("No file selected or invalid file type", "danger")
+                return redirect(url_for("add_file"))
 
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(UPLOAD_FOLDER, filename))
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(UPLOAD_FOLDER, filename))
 
-        db.session.add(FileUpload(
-            title=request.form["title"],
-            filename=filename
-        ))
-        db.session.commit()
+            db.session.add(FileUpload(
+                title=request.form["title"],
+                filename=filename
+            ))
+            db.session.commit()
 
-        flash("File uploaded", "success")
-    return redirect(url_for("dashboard"))
+            flash("File uploaded", "success")
+            return redirect(url_for("dashboard"))
 
     return render_template("add_file.html")
+
 @app.route("/edit-file/<int:id>", methods=["GET", "POST"])
 @admin_required
 def edit_file(id):
@@ -691,6 +692,12 @@ def login_user():
 
     return render_template("user_login.html")
 
+# ----------------  user logout  ----------------
+@app.route("/user-logout")
+def user_logout():
+    session.pop("user", None)
+    flash("User logged out", "info")
+    return redirect(url_for("resources"))
 
 # ----------------  Forget Password  ----------------
 
@@ -763,7 +770,7 @@ def change_password():
 
             if new_password != confirm_password:
                 flash("Passwords do not match", "danger")
-                return render_template("reset_password.html")
+                return render_template("Reset_password.html")
             
             user.password = generate_password_hash(new_password)
             db.session.commit()
@@ -778,7 +785,7 @@ def change_password():
             return redirect(url_for("login_user"))
 
 
-        return render_template("reset_password.html")
+        return render_template("Reset_password.html")
 
    
 # ---------------- RUN ----------------
