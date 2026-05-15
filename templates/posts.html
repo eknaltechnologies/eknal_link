@@ -43,7 +43,7 @@
 <script>
   document.querySelectorAll(".delete-btn").forEach(function (btn) {
     btn.addEventListener("click", function (e) {
-      var message = btn.dataset("data-confirm") || "Are you sure?";
+      var message = btn.dataset.confirm || "Are you sure?";
       if (!globalThis.confirm(message)) { e.preventDefault(); }
     });
   });
