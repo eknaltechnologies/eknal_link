@@ -17,6 +17,7 @@ import random
 import string
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_wtf.csrf import CSRFProtect
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_FROM = os.getenv("EMAIL_FROM")
@@ -32,6 +33,7 @@ redis_client = redis.Redis(
 # ---------------- APP ----------------
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", os.urandom(24).hex())
+csrf = CSRFProtect(app)
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(basedir, "instance", "data.db")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
