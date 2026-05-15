@@ -4,12 +4,28 @@
 <div class="flex-grow flex items-center justify-center px-4 pt-24 pb-12 relative z-10">
   <div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-lg">
     <h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">Create Post</h2>
-    <form method="post" enctype="multipart/form-data" class="space-y-5">
-      <div>
-        <label for="title" class="block text-sm font-medium mb-2">Title</label>
-        <input type="text" name="title" id="title" required autofocus placeholder="Enter post title" class="w-full border px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
-      </div>
-      <div>
+    <form method="post"
+      enctype="multipart/form-data"
+      class="space-y-5">
+
+  <input type="hidden"
+         name="csrf_token"
+         value="{{ csrf_token() }}">
+
+  <div>
+    <label for="title"
+           class="block text-sm font-medium mb-2">
+      Title
+    </label>
+
+    <input type="text"
+           name="title"
+           id="title"
+           required
+           autofocus
+           placeholder="Enter post title"
+           class="w-full border px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
+  </div>
         <label for="content" class="block text-sm font-medium mb-2">Content</label>
         <textarea name="content" id="content" rows="6" required placeholder="Write your post content here..." class="w-full border px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none resize-y"></textarea>
       </div>
