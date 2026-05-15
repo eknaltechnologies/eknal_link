@@ -725,6 +725,18 @@ def delete_activity(id):
     db.session.commit()
     flash("Activity deleted", "success")
     return redirect(url_for("post_activity"))
+@app.context_processor
+def inject_current_user():
+    user_email = session.get("user")
+    
+    if user_email:
+        current_user = Collaborator.query.filter_by(
+            email=user_email
+        ).first()
+
+        return {"cuser":current_user}
+
+    return {"cuser":None}
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=False, port=9123)
