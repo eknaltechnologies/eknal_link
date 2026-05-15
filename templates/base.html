@@ -24,7 +24,7 @@
       </button>
       <div id="profileDropdown" role="menu" class="hidden absolute right-0 mt-3 w-52 bg-white rounded-xl shadow-xl border overflow-hidden z-50">
         <div class="px-4 py-3 border-b bg-slate-50">
-          <p class="font-semibold text-slate-800">{% if current_user %}{{ current_user.name }}{% endif %}</p>
+          <p class="font-semibold text-slate-800">{% if current_user %}{{ current_user.name }}{% else %}User{% endif %}</p>
           <p class="text-xs text-slate-500 break-all">{% if current_user %}{{ current_user.email }}{% endif %}</p>
         </div>
         <a href="{{ url_for('user_logout') }}" role="menuitem" class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition">Logout</a>

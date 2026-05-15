@@ -723,4 +723,4 @@ def delete_activity(id):
     return redirect(url_for("post_activity"))
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True, port=9123)
+    app.run(debug=False, port=9123)
