@@ -563,6 +563,7 @@ def forgot_password():
             return redirect(url_for("verify_otpuser"))
         flash("Email not found", "danger")
     return render_template("forget_password.html")
+# CSRF protection implemented globally using Flask-WTF CSRFProtect and csrf_token added to password reset forms.
 @app.route("/verify-otpUser", methods=["GET", "POST"])
 def verify_otpuser():
     if request.method == "POST":
