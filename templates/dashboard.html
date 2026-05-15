@@ -57,7 +57,13 @@
             <td class="px-5 py-4 text-right space-x-4">
               <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">Open</a>
               <a href="{{ url_for('edit_link', id=link.id) }}" class="text-amber-600 hover:underline">Edit</a>
-              <form action="{{ url_for('delete_link', id=link.id) }}" method="post" class="inline delete-form">
+              <form action="{{ url_for('delete_link', id=link.id) }}"
+      method="post"
+      class="inline delete-form">
+
+  <input type="hidden"
+         name="csrf_token"
+         value="{{ csrf_token() }}">
                 <button type="submit" data-confirm="Delete this link?" class="text-red-600 hover:underline delete-btn">Delete</button>
               </form>
             </td>
@@ -88,7 +94,13 @@
             <td class="px-5 py-4 text-right space-x-4">
               <a href="{{ url_for('download', id=file.id) }}" class="text-indigo-600 hover:underline">Download</a>
               <a href="{{ url_for('edit_file', id=file.id) }}" class="text-amber-600 hover:underline">Edit</a>
-              <form action="{{ url_for('delete_file', id=file.id) }}" method="post" class="inline delete-form">
+              <form action="{{ url_for('delete_file', id=file.id) }}"
+      method="post"
+      class="inline delete-form">
+
+  <input type="hidden"
+         name="csrf_token"
+         value="{{ csrf_token() }}">
                 <button type="submit" data-confirm="Delete this file?" class="text-red-600 hover:underline delete-btn">Delete</button>
               </form>
             </td>

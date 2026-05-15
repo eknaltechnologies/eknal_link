@@ -729,16 +729,13 @@ def delete_activity(id):
     return redirect(url_for("post_activity"))
 @app.context_processor
 def inject_current_user():
-    user_email = session.get("user")
-    
-    if user_email:
-        current_user = Collaborator.query.filter_by(
-            email=user_email
+    username = session.get("user")
+    if username:
+        current_user = User.query.filter_by(
+            username=username
         ).first()
-
-        return {"cuser":current_user}
-
-    return {"cuser":None}
+        return {"current_user": current_user}
+    return {"current_user": None}
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=False, port=9123)
