@@ -1,110 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>User Dashboard | Eknal Technologies</title>
-  <script src="https://cdn.tailwindcss.com" ></script>
-</head>
-<body class="min-h-screen bg-slate-50 text-slate-800">
-<header class="bg-white border-b shadow-sm">
-  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <img src="{{ url_for('static', filename='eknal_link.png') }}" class="h-8" alt="Eknal Link Logo">
-    </div>
-    <div class="flex items-center gap-6">
-      <a href="{{ url_for('resources') }}" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">Resources</a>
-      <a href="{{ url_for('collaborators') }}" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">Collaborators</a>
-      <div class="relative">
-        <button id="profileButton" type="button" class="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold flex items-center justify-center shadow-md hover:scale-105 transition">{{ current_user.name[0]|upper }}</button>
-        <div id="profileDropdown" class="hidden absolute right-0 mt-3 w-52 bg-white rounded-xl shadow-xl border overflow-hidden z-50">
-          <div class="px-4 py-3 border-b bg-slate-50">
-            <p class="font-semibold text-slate-800">{{ current_user.name }}</p>
-            <p class="text-xs text-slate-500 break-all">{{ current_user.email }}</p>
-          </div>
-          <a href="{{ url_for('user_logout') }}" class="block px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition">Logout</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</header>
-<main class="max-w-7xl mx-auto px-6 py-10">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-  {% for category, message in messages %}
-  <div id="toast" class="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-7 py-3 rounded-xl shadow-xl bg-white/90 backdrop-blur-md text-gray-800 text-sm font-medium border border-gray-200 flex items-center gap-3 transform scale-95 translate-y-4 opacity-0 transition-all duration-500">
-    <span class="w-1.5 h-6 rounded-full {% if category=='success' %}bg-green-500{% elif category=='danger' %}bg-red-500{% else %}bg-indigo-500{% endif %}"></span>
-    <span>{{ message }}</span>
-  </div>
-  {% endfor %}
-  {% endif %}
-  {% endwith %}
+{% extends "base.html" %}
+
+{% block title %}User Dashboard | Eknal Technologies{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-24 relative z-10">
+
   <div class="mb-8">
-    <h1 class="text-2xl font-semibold">Welcome, {{ current_user.name }}</h1>
-    <p class="text-slate-500 text-sm">Explore resources, collaborators, and latest posts.</p>
+    <h1 class="text-2xl font-semibold">
+      Welcome, {{ current_user.name }}
+    </h1>
+    <p class="text-slate-500 text-sm">
+      Explore resources, collaborators, and latest posts.
+    </p>
   </div>
+
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-    <a href="{{ url_for('resources') }}" class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+
+    <a href="{{ url_for('resources') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
       <p class="text-sm text-slate-500">Explore</p>
       <h3 class="font-semibold text-lg mt-1">Resources</h3>
     </a>
-    <a href="{{ url_for('collaborators') }}" class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+
+    <a href="{{ url_for('collaborators') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
       <p class="text-sm text-slate-500">Team</p>
       <h3 class="font-semibold text-lg mt-1">Collaborators</h3>
     </a>
-    <a href="{{ url_for('change_password') }}" class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+
+    <a href="{{ url_for('change_password') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
       <p class="text-sm text-slate-500">Security</p>
       <h3 class="font-semibold text-lg mt-1">Change Password</h3>
     </a>
-    <a href="{{ url_for('post_list') }}" class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+
+    <a href="{{ url_for('post_list') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
       <p class="text-sm text-slate-500">Read</p>
       <h3 class="font-semibold text-lg mt-1">Posts</h3>
     </a>
-    <a href="{{ url_for('post_activity') }}" class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+
+    <a href="{{ url_for('post_activity') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
       <p class="text-sm text-slate-500">Explore</p>
       <h3 class="font-semibold text-lg mt-1">Activities</h3>
     </a>
+
   </div>
+
   <section>
     <h2 class="text-lg font-semibold mb-4">Your Information</h2>
+
     <div class="bg-white border rounded-xl overflow-hidden">
       <table class="w-full text-sm" aria-hidden="true">
         <tbody>
+
           <tr class="border-t">
-            <td class="px-5 py-4 font-medium text-slate-500 w-48">Name</td>
-            <td class="px-5 py-4">{{ current_user.name }}</td>
+            <td class="px-5 py-4 font-medium text-slate-500 w-48">
+              Name
+            </td>
+            <td class="px-5 py-4">
+              {{ current_user.name }}
+            </td>
           </tr>
+
           <tr class="border-t">
-            <td class="px-5 py-4 font-medium text-slate-500">Username</td>
-            <td class="px-5 py-4">{{ current_user.username }}</td>
+            <td class="px-5 py-4 font-medium text-slate-500">
+              Username
+            </td>
+            <td class="px-5 py-4">
+              {{ current_user.username }}
+            </td>
           </tr>
+
           <tr class="border-t">
-            <td class="px-5 py-4 font-medium text-slate-500">Email</td>
-            <td class="px-5 py-4">{{ current_user.email }}</td>
+            <td class="px-5 py-4 font-medium text-slate-500">
+              Email
+            </td>
+            <td class="px-5 py-4">
+              {{ current_user.email }}
+            </td>
           </tr>
+
         </tbody>
       </table>
     </div>
   </section>
-</main>
-<footer class="text-center text-gray-500 text-xs sm:text-sm z-10 py-4 mt-auto border-t border-gray-300 w-full px-4">
-  <p>Developed by <a href="https://eknaltechnologies.in" target="_blank" rel="noopener noreferrer" class="text-indigo-600 font-semibold hover:underline">Eknal Technologies</a></p>
-</footer>
-<script>
-  const toast = document.getElementById("toast");
-  if (toast) {
-    setTimeout(() => { toast.classList.remove("opacity-0", "scale-95", "translate-y-4"); }, 100);
-    setTimeout(() => { toast.classList.add("opacity-0"); }, 2500);
-    setTimeout(() => { toast.remove(); }, 3000);
-  }
-  const profileButton = document.getElementById("profileButton");
-  const profileDropdown = document.getElementById("profileDropdown");
-  profileButton.addEventListener("click", () => { profileDropdown.classList.toggle("hidden"); });
-  globalThis.addEventListener("click", function (e) {
-    if (!profileButton.contains(e.target) && !profileDropdown.contains(e.target)) {
-      profileDropdown.classList.add("hidden");
-    }
-  });
-</script>
-</body>
-</html>
+
+</div>
+{% endblock %}
