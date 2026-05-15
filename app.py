@@ -598,7 +598,7 @@ def change_password():
         flash("Password changed successfully. Please log in.", "success")
         return redirect(url_for("login_user"))
     return render_template("Reset_password.html")
-@app.route("/user-logout")
+@app.route("/user-logout",methods=["GET"])
 def user_logout():
     session.pop("user", None)
     flash(log_out, "info")
@@ -610,7 +610,7 @@ def user_dashboard():
         return redirect(url_for("login_user"))
     current_user = User.query.filter_by(username=session.get("user")).first()
     return render_template("user_dashboard.html", current_user=current_user)# ---------------- POSTS ----------------
-@app.route("/posts")
+@app.route("/posts",methods=["GET"])
 def post_list():
     posts = Post.query.order_by(Post.id.desc()).all()
     return render_template("posts.html", posts=posts)
@@ -665,7 +665,7 @@ def delete_post(id):
     flash("Post deleted", "success")
     return redirect(url_for("post_list"))
 # ---------------- ACTIVITIES ----------------
-@app.route("/activities")
+@app.route("/activities",methods=["GET"])
 def post_activity():
     activities = Activity.query.order_by(Activity.id.desc()).all()
     return render_template("eknal_activities.html", activities=activities)
