@@ -38,8 +38,12 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 instance_folder = os.path.join(basedir, "instance")
 os.makedirs(instance_folder, exist_ok=True)
 UPLOAD_FOLDER = os.path.join("static", "uploads")
-ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
+DOC_ALLOWED_EXTENSIONS = {"txt", "pdf"}
+IMAGE_ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+ALLOWED_EXTENSIONS = DOC_ALLOWED_EXTENSIONS
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["DOC_ALLOWED_EXTENSIONS"] = DOC_ALLOWED_EXTENSIONS
+app.config["IMAGE_ALLOWED_EXTENSIONS"] = IMAGE_ALLOWED_EXTENSIONS
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 naming_convention = {"fk": "fk_%(table_name)s_%(referred_table_name)s"}
