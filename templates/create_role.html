@@ -1,135 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Eknal Link | New Role</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 via-white to-indigo-100 text-gray-900 relative overflow-x-hidden">
-
-<!-- Background Pattern -->
-<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
-
-<!-- Logo -->
-<div class="absolute top-4 left-4 z-20">
-  <img src="{{ url_for('static', filename='eknal_link.png') }}"
-       class="h-8 sm:h-12">
-</div>
-
-<!-- Main Content -->
+{% extends "base.html" %}
+{% block title %}New Role | Eknal Technologies{% endblock %}
+{% block content %}
 <div class="flex-grow flex items-center justify-center px-4 pt-24 pb-12 relative z-10">
-
-<div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md">
-
-<h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">
-
-New Role
-</h2>
-
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-<div class="mb-4 space-y-2">
-       {% for category, message in messages %}
-       <div class="px-4 py-2 rounded-lg text-sm
-              {% if category == 'success' %}bg-green-100 text-green-700 border border-green-300{% endif %}
-              {% if category == 'danger' %}bg-red-100 text-red-700 border border-red-300{% endif %}
-              {% if category == 'warning' %}bg-yellow-100 text-yellow-700 border border-yellow-300{% endif %}
-              {% if category not in ['success', 'danger', 'warning'] %}bg-blue-100 text-blue-700 border border-blue-300{% endif %}">
-              {{ message }}
-       </div>
-       {% endfor %}
+  <div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">New Role</h2>
+    <form method="post" class="space-y-5" id="roleForm">
+      <div>
+        <label for="role_name" class="block text-sm mb-2">Role</label>
+        <input type="text" name="role_name" id="role_name" required autofocus placeholder="Enter role name" class="w-full border px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
+      </div>
+      <div>
+        <label for="description" class="block text-sm mb-2">Description</label>
+        <textarea name="description" id="description" rows="4" placeholder="Enter role description" class="w-full border px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none"></textarea>
+      </div>
+      <fieldset>
+        <legend class="block text-sm mb-3">Access Permissions</legend>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <label class="flex items-center gap-2" for="access_read">
+            <input type="checkbox" name="access" id="access_read" value="read" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">Read
+          </label>
+          <label class="flex items-center gap-2" for="access_write">
+            <input type="checkbox" name="access" id="access_write" value="write" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">Write
+          </label>
+          <label class="flex items-center gap-2" for="access_update">
+            <input type="checkbox" name="access" id="access_update" value="update" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">Update
+          </label>
+          <label class="flex items-center gap-2" for="access_delete">
+            <input type="checkbox" name="access" id="access_delete" value="delete" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">Delete
+          </label>
+        </div>
+        <p class="text-xs text-gray-500 mt-3">Select one or more permissions for this role.</p>
+      </fieldset>
+      <hr class="my-4">
+      <div class="flex justify-end gap-3">
+        <a href="{{ url_for('dashboard') }}" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition">Back</a>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold hover:from-yellow-500 hover:to-orange-500 transition">New Role</button>
+      </div>
+    </form>
+  </div>
 </div>
-{% endif %}
-{% endwith %}
-
-<form method="post" class="space-y-4" id="collabForm">
-
-<!-- Role -->
-<div>
-<label class="block text-sm mb-1">Role</label>
-<input type="text" name="role_name" required autofocus
-       placeholder="Enter full name"
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none">
-</div>
-
-<!-- Description -->
-<div>
-<label class="block text-sm mb-1">Description</label>
-<textarea name="description" 
-       placeholder="Enter role description"
-       class="w-full border px-3 py-2 rounded-lg
-              focus:ring-2 focus:ring-indigo-400 outline-none"></textarea>
-</div>
-
-<!-- Access -->
-<div>
-<label class="block text-sm mb-1">Access</label>
-<div class="grid grid-cols-2 gap-2 text-sm">
-       <label class="flex items-center gap-2">
-              <input type="checkbox" name="access" value="read" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-              Read
-       </label>
-       <label class="flex items-center gap-2">
-              <input type="checkbox" name="access" value="write" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-              Write
-       </label>
-       <label class="flex items-center gap-2">
-              <input type="checkbox" name="access" value="update" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-              Update
-       </label>
-       <label class="flex items-center gap-2">
-              <input type="checkbox" name="access" value="delete" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-              Delete
-       </label>
-</div>
-<p class="text-xs text-gray-500 mt-2">Select one or more permissions for this role.</p>
-</div>
-
-
-<hr class="my-4">
-
-<!-- Actions -->
-<div class="flex justify-end gap-3">
-
-<a href="/dashboard"
-   class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
-Back
-</a>
-
-<button type="submit"
-        class="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500
-               text-white rounded-lg font-semibold">
-New Role
-</button>
-
-</div>
-
-</form>
-
-</div>
-
-</div>
-
-<!-- Footer -->
-<footer class="text-center text-gray-500 text-xs sm:text-sm z-10 py-4 mt-auto border-t border-gray-300 w-full px-4">
-<p>
-  Developed by
-  <a href="https://www.linkedin.com/in/shalem-raj-putta-054388295/"
-     target="_blank"
-     class="text-indigo-600 font-semibold hover:underline">
-    Shalem Raj (Python Intern)
-  </a>
-  at
-  <a href="https://eknaltechnologies.in"
-     target="_blank"
-     class="text-indigo-600 font-semibold hover:underline">
-    Eknal Technologies
-  </a>.
-</p>
-</footer>
-</body>
-</html>
+{% endblock %}

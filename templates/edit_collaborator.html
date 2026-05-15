@@ -1,218 +1,52 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Edit Collaborator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 via-white to-indigo-100 text-gray-900 relative overflow-x-hidden">
-
-<!-- Background Pattern -->
-<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5 pointer-events-none"></div>
-
-<!-- Logo -->
-<div class="absolute top-4 left-4 z-20">
-  <img src="{{ url_for('static', filename='eknal_link.png') }}"
-       alt="Eknal Link Logo"
-       class="h-8 sm:h-12">
-</div>
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-  {% for category, message in messages %}
-  <div id="toast"
-       class="fixed top-6 left-1/2 -translate-x-1/2 z-50
-              px-7 py-3 rounded-xl shadow-xl
-              bg-white/90 backdrop-blur-md
-              text-gray-800 text-sm font-medium
-              border border-gray-200
-              flex items-center gap-3
-              transform scale-95 translate-y-4 opacity-0
-              transition-all duration-500">
-
-      <!-- Accent bar -->
-      <span class="w-1.5 h-6 rounded-full
-            {% if category=='success' %}bg-green-500
-            {% elif category=='danger' %}bg-red-500
-            {% else %}bg-indigo-500{% endif %}">
-      </span>
-
-      <span>{{ message }}</span>
-
-  </div>
-  {% endfor %}
-{% endif %}
-{% endwith %}
-<!-- Main Content -->
+{% extends "base.html" %}
+{% block title %}Edit Collaborator | Eknal Technologies{% endblock %}
+{% block content %}
 <div class="flex-grow flex items-center justify-center px-4 pt-24 pb-12 relative z-10">
-
-  <!-- Card -->
   <div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md">
-
-    <h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">
-      Edit Collaborator
-    </h2>
-
-    <!-- UPDATE FORM -->
-    <form id="updateForm" method="post" class="space-y-4">
-
-      <!-- Name -->
+    <h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">Edit Collaborator</h2>
+    <form id="updateForm" method="post" class="space-y-5">
       <div>
-        <label class="block text-sm font-medium mb-1">Name</label>
-        <input type="text"
-               name="name"
-               value="{{ collaborator.name }}"
-               class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none"
-               required>
+        <label for="name" class="block text-sm font-medium mb-2">Name</label>
+        <input type="text" name="name" id="name" required value="{{ collaborator.name }}" class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
-
-      <!-- Email -->
       <div>
-        <label class="block text-sm font-medium mb-1">Email</label>
-        <input type="email"
-               name="email"
-               value="{{ collaborator.email }}"
-               class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none"
-               required>
+        <label for="email" class="block text-sm font-medium mb-2">Email</label>
+        <input type="email" name="email" id="email" required value="{{ collaborator.email }}" class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
-
-      <!-- Resume -->
       <div>
-        <label class="block text-sm font-medium mb-1">Resume URL</label>
-        <input type="url"
-               name="resume"
-               value="{{ collaborator.resume_url }}"
-               class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none"
-               required>
+        <label for="resume" class="block text-sm font-medium mb-2">Resume URL</label>
+        <input type="url" name="resume" id="resume" required value="{{ collaborator.resume_url }}" class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
-
-      <!-- Contribution -->
       <div>
-        <label class="block text-sm font-medium mb-1">Contribution</label>
-        <input type="text"
-               name="contribution"
-               value="{{ collaborator.contribution }}"
-               class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none"
-               required>
+        <label for="contribution" class="block text-sm font-medium mb-2">Contribution</label>
+        <input type="text" name="contribution" id="contribution" required value="{{ collaborator.contribution }}" class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
-
-
-    <div>
-<label class="block text-sm mb-1">Contribution Type</label>
-
-<select name="contribution_type"
-        class="w-full border px-3 py-2 rounded-lg
-               focus:ring-2 focus:ring-indigo-400 outline-none">
-
-{% for t in types %}
-
-<option value="{{ t.id }}"
-{% if collaborator.contribution_type_id == t.id %}selected{% endif %}>
-{{ t.name }}
-</option>
-
-{% endfor %}
-
-</select>
-</div>
-
-     <!-- LinkedIn -->
       <div>
-        <label class="block text-sm font-medium mb-1">LinkedIn</label>
-        <input type="url"
-               name="linkedin"
-               value="{{ collaborator.linkedin or '' }}"
-               class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none">
+        <label for="contribution_type" class="block text-sm font-medium mb-2">Contribution Type</label>
+        <select name="contribution_type" id="contribution_type" class="w-full border px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none bg-white">
+          {% for t in types %}
+          <option value="{{ t.id }}" {% if collaborator.contribution_type_id == t.id %}selected{% endif %}>{{ t.name }}</option>
+          {% endfor %}
+        </select>
       </div>
-      
-      <!-- GitHub -->
       <div>
-        <label class="block text-sm font-medium mb-1">GitHub</label>
-        <input type="url"
-               name="github"
-               value="{{ collaborator.github or '' }}"
-               class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none">
+        <label for="linkedin" class="block text-sm font-medium mb-2">LinkedIn</label>
+        <input type="url" name="linkedin" id="linkedin" value="{{ collaborator.linkedin or '' }}" class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
-
-      <!-- Source -->
       <div>
-        <label class="block text-sm font-medium mb-1">Source</label>
-        <input type="text"
-               name="source"
-               value="{{ collaborator.source or '' }}"
-               class="w-full border border-gray-300 px-3 py-2 rounded-lg
-                      focus:ring-2 focus:ring-indigo-400 outline-none">
+        <label for="github" class="block text-sm font-medium mb-2">GitHub</label>
+        <input type="url" name="github" id="github" value="{{ collaborator.github or '' }}" class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
       </div>
-
-
+      <div>
+        <label for="source" class="block text-sm font-medium mb-2">Source</label>
+        <input type="text" name="source" id="source" value="{{ collaborator.source or '' }}" class="w-full border border-gray-300 px-4 py-3 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
+      </div>
+      <hr class="my-4">
+      <div class="flex justify-end gap-3">
+        <a href="{{ url_for('collaborators') }}" class="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition">Back</a>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-gradient-to-r from-orange-500 to-yellow-500 text-white font-semibold hover:from-yellow-500 hover:to-orange-500 transition">Update</button>
+      </div>
     </form>
-
-    <hr class="my-4">
-
-    <!-- ACTION BUTTONS -->
-    <div class="flex justify-end gap-3">
-
-      <!-- Back -->
-      <a href="/collaborators"
-         class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
-        Back
-      </a>
-      
-      <!-- Update -->
-      <button form="updateForm"
-              type="submit"
-              class="px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500
-                     text-white rounded-lg font-semibold">
-        Update
-      </button>
-
-    </div>
-
   </div>
-
 </div>
-
-<footer class="text-center text-gray-500 text-xs sm:text-sm z-10 py-4 mt-auto border-t border-gray-300 w-full px-4">
-<p>
-  Developed by
-  <a href="https://www.linkedin.com/in/shalem-raj-putta-054388295/"
-     target="_blank"
-     class="text-indigo-600 font-semibold hover:underline">
-    Shalem Raj (Python Intern)
-  </a>
-  at
-  <a href="https://eknaltechnologies.in"
-     target="_blank"
-     class="text-indigo-600 font-semibold hover:underline">
-    Eknal Technologies
-  </a>.
-</p>
-</footer>
-<script>
-const toast = document.getElementById("toast");
-
-if (toast) {
-  setTimeout(() => {
-    toast.classList.remove("opacity-0", "scale-95", "translate-y-4");
-  }, 100);
-
-  setTimeout(() => {
-    toast.classList.add("opacity-0");
-  }, 2500);
-
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
-}
-</script>
-</body>
-</html>
+{% endblock %}
