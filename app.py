@@ -603,7 +603,7 @@ def user_logout():
     session.pop("user", None)
     flash(log_out, "info")
     return redirect(url_for("login_user"))
-@app.route("/user-dashboard")
+@app.route("/user-dashboard",methods=['GET'])
 def user_dashboard():
     if not session.get("user"):
         flash("Please login first", "danger")
