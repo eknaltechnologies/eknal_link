@@ -52,31 +52,31 @@
     <h2 class="text-lg font-semibold mb-4">Your Information</h2>
 
     <div class="bg-white border rounded-xl overflow-hidden">
-      <table class="w-full text-sm" aria-hidden="true">
+      <table class="w-full text-sm">
         <tbody>
 
           <tr class="border-t">
-            <td class="px-5 py-4 font-medium text-slate-500 w-48">
+            <th id="px-5 py-4 font-medium text-slate-500 w-48">
               Name
-            </td>
+            </th>
             <td class="px-5 py-4">
               {{ current_user.name }}
             </td>
           </tr>
 
           <tr class="border-t">
-            <td class="px-5 py-4 font-medium text-slate-500">
+            <th id="px-5 py-4 font-medium text-slate-500">
               Username
-            </td>
+            </th>
             <td class="px-5 py-4">
               {{ current_user.username }}
             </td>
           </tr>
 
           <tr class="border-t">
-            <td class="px-5 py-4 font-medium text-slate-500">
+            <th class="px-5 py-4 font-medium text-slate-500">
               Email
-            </td>
+            </th>
             <td class="px-5 py-4">
               {{ current_user.email }}
             </td>
