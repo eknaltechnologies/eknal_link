@@ -390,7 +390,7 @@ def generate_temporary_password(length=12):
 def generate_otp():
     return str(random.randint(100000, 999999))
 def current_timestamp():
-    return datetime.now().isoformat(sep=" ", timespec="seconds")
+    return datetime.utcnow().isoformat(sep=" ", timespec="seconds")
 def save_otp(email, otp):
     redis_client.setex(f"otp:{email}", 300, otp)
 def get_otp(email):
