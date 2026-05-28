@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Eknal Link | Login{% endblock %}
+{% block content %}
+<div class="flex-grow flex items-center justify-center px-4 pt-24 pb-12 relative z-10">
+  <div class="bg-white/80 backdrop-blur p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <h2 class="text-2xl font-bold mb-6 text-indigo-700 text-center">Login Now</h2>
+    <form method="post" class="space-y-4" id="loginForm">
+  <div>
+    <label for="username" class="block text-sm mb-1">
+      User Name
+    </label>
+
+    <input
+      type="text"
+      name="username"
+      id="username"
+      required
+      autofocus
+      placeholder="Enter user name"
+      class="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none"
+    >
+  </div>
+      <div>
+        <label for="password" class="block text-sm mb-1">Password</label>
+        <input type="password" name="password" id="password" required autocomplete="current-password" placeholder="Enter password" class="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none">
+      </div>
+      <div>
+        <a href="{{ url_for('forgot_password') }}" class="text-sm text-indigo-600 hover:underline">Forgot password?</a>
+      </div>
+      <button type="submit" class="w-full px-4 py-2 bg-gradient-to-r from-orange-500 to-yellow-500 text-white rounded-lg font-semibold hover:from-yellow-500 hover:to-orange-500 transition">Login</button>
+    </form>
+    <div class="mt-4 text-center">
+      <a href="{{ url_for('resources') }}" class="text-sm text-indigo-700 font-semibold hover:text-indigo-500 transition">← Back to Resources</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

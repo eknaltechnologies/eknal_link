@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}User Dashboard | Eknal Technologies{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-6 py-24 relative z-10">
+
+  <div class="mb-8">
+    <h1 class="text-2xl font-semibold">
+      Welcome, {{ current_user.name }}
+    </h1>
+    <p class="text-slate-500 text-sm">
+      Explore resources, collaborators.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+
+    <a href="{{ url_for('resources') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+      <p class="text-sm text-slate-500">Explore</p>
+      <h3 class="font-semibold text-lg mt-1">Resources</h3>
+    </a>
+
+    <a href="{{ url_for('collaborators') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+      <p class="text-sm text-slate-500">Team</p>
+      <h3 class="font-semibold text-lg mt-1">Collaborators</h3>
+    </a>
+
+    <a href="{{ url_for('change_password') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+      <p class="text-sm text-slate-500">Security</p>
+      <h3 class="font-semibold text-lg mt-1">Change Password</h3>
+    </a>
+
+    <a href="{{ url_for('user_add_link') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+      <p class="text-sm text-slate-500">Create</p>
+      <h3 class="font-semibold text-lg mt-1">Add Link</h3>
+    </a>
+
+    <a href="{{ url_for('user_add_file') }}"
+       class="bg-white border rounded-xl p-5 hover:shadow-md transition">
+      <p class="text-sm text-slate-500">create</p>
+      <h3 class="font-semibold text-lg mt-1">Add File</h3>
+    </a>
+
+  </div>
+<section class="mb-12">
+    <h2 class="text-lg font-semibold mb-4">Links</h2>
+    <div class="bg-white/80 backdrop-blur border rounded-2xl overflow-hidden shadow-lg">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-100">
+          <tr>
+            <th class="text-left px-5 py-4" scope="col">Title</th>
+            <th class="text-right px-5 py-4" scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for link in links %}
+          <tr class="border-t">
+            <td class="px-5 py-4">{{ link.title }}</td>
+            <td class="px-5 py-4 text-right space-x-4">
+              <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline">Open</a>
+              <a href="{{ url_for('user_edit_link', id=link.id) }}" class="text-amber-600 hover:underline">Edit</a>
+              <form action="{{ url_for('user_delete_link', id=link.id) }}"
+      method="post"
+      class="inline delete-form">
+                <button type="submit" data-confirm="Delete this link?" class="text-red-600 hover:underline delete-btn">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="2" class="px-5 py-6 text-center text-slate-500">No links added</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2 class="text-lg font-semibold mb-4">Files</h2>
+    <div class="bg-white/80 backdrop-blur border rounded-2xl overflow-hidden shadow-lg">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-100">
+          <tr>
+            <th class="text-left px-5 py-4" scope="col">Title</th>
+            <th class="text-right px-5 py-4" scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for file in files %}
+          <tr class="border-t">
+            <td class="px-5 py-4">{{ file.title }}</td>
+            <td class="px-5 py-4 text-right space-x-4">
+              <a href="{{ url_for('download', id=file.id) }}" class="text-indigo-600 hover:underline">Download</a>
+              <a href="{{ url_for('user_edit_file', id=file.id) }}" class="text-amber-600 hover:underline">Edit</a>
+              <form action="{{ url_for('user_delete_file', id=file.id) }}"
+      method="post"
+      class="inline delete-form">
+
+                <button type="submit" data-confirm="Delete this file?" class="text-red-600 hover:underline delete-btn">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="2" class="px-5 py-6 text-center text-slate-500">No files uploaded</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  <section>
+    <h2 class="text-lg font-semibold mb-4">Your Information</h2>
+
+    <div class="bg-white border rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <tbody>
+
+          <tr class="border-t">
+            <th id="px-5 py-4 font-medium text-slate-500 w-48">
+              Name
+            </th>
+            <td class="px-5 py-4">
+              {{ current_user.name }}
+            </td>
+          </tr>
+
+          <tr class="border-t">
+            <th id="px-5 py-4 font-medium text-slate-500">
+              Username
+            </th>
+            <td class="px-5 py-4">
+              {{ current_user.username }}
+            </td>
+          </tr>
+
+          <tr class="border-t">
+            <th class="px-5 py-4 font-medium text-slate-500">
+              Email
+            </th>
+            <td class="px-5 py-4">
+              {{ current_user.email }}
+            </td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
