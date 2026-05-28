@@ -921,10 +921,8 @@ def user_delete_file(id):
     flash("File deleted", "success")
     return redirect(url_for("user_dashboard"))
 
-# @app1.route("/edit-user/<int:id>",methods=["GET","POST"])
-# def edit_user(id):
-#     if request.method=="POST":
+
 
 # ---------------- RUN ----------------
 if __name__ == "__main__":
-    app.run(debug=True, port = 9123)
+    app.run(debug=False, port = 9123)
