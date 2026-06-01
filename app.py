@@ -44,7 +44,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 instance_folder = os.path.join(basedir, "instance")
 os.makedirs(instance_folder, exist_ok=True)
 
-UPLOAD_FOLDER = "uploads"
+UPLOAD_FOLDER = os.path.join("static", "uploads")
 ALLOWED_EXTENSIONS = {"txt", "pdf", "png", "jpg", "jpeg", "gif"}
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
@@ -71,12 +71,14 @@ class Link(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     url = db.Column(db.String(300), nullable=False)
-
+    user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=True)
+    
 class FileUpload(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(120), nullable=False)
     filename = db.Column(db.String(300), nullable=False)
-
+    user_id=db.Column(db.Integer,db.ForeignKey('user.id'),nullable=True)
+    
 class ContributionType(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
@@ -92,15 +94,19 @@ class Collaborator(db.Model):
     linkedin = db.Column(db.String(300), nullable = True)
     github = db.Column(db.String(300), nullable = True)
     source = db.Column(db.String(120), nullable = True)
-    
+    photo = db.Column(db.String(300), nullable=True)
+ 
 class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), nullable=False,unique=True)
     name = db.Column(db.String(120), nullable=False)
-    username = db.Column(db.String(120),primary_key=True,nullable=False)
+    username = db.Column(db.String(120),nullable=False,unique=True)
     password = db.Column(db.String(255),nullable=False)
     role_id = db.Column(db.Integer,db.ForeignKey('role.id'))
     Metadata = db.Column(db.String(300),nullable=True)
-
+    links = db.relationship('Link',backref='user',lazy=True)
+    files = db.relationship('FileUpload',backref='user',lazy=True)
+    
 class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
@@ -108,6 +114,7 @@ class Role(db.Model):
     updated_at = db.Column(db.String(300),nullable=False)
     Metadata = db.Column(db.String(300),nullable=True)
 
+RESOURCES_TEMPLATE = "resources.html"
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
@@ -116,7 +123,16 @@ def admin_required(f):
     def decorated(*args, **kwargs):
         if not session.get("is_admin"):
             flash("Admin access only", "danger")
-            return redirect(url_for("admin_login"))
+            return redirect(url_for("login"))
+        return f(*args, **kwargs)
+    return decorated
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("user"):
+            flash("User access only", "danger")
+            return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated
 
@@ -143,45 +159,75 @@ def admin_entry():
         flash("Logged out", "info")
         return redirect(url_for("resources"))
     else:
-        return redirect(url_for("admin_login"))
-@app.route("/admin-login", methods=["GET", "POST"])
-def admin_login():
-    if session.get("is_admin"):
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("login"))
+    
+def is_admin_login(username, password):
+    return (username == ADMIN_USERNAME and password == ADMIN_PASSWORD)
 
-    if request.method == "POST":
-        if (
-            request.form["username"] == ADMIN_USERNAME and
-            request.form["password"] == ADMIN_PASSWORD
-        ):
+    
+@app.route("/login",methods=["GET","POST"])
+def login():
+    if request.method =="POST":
+        username=request.form["username"]
+        password=request.form["password"]
+        if not username or not password:
+            flash("Please enter both username and password","danger")
+            return render_template("login.html")
+        
+        if is_admin_login(username,password):
             session["is_admin"] = True
-            flash("Login successful", "success")
+            flash("Admin login successful", "success")
             return redirect(url_for("dashboard"))
-        else:
-            flash("Invalid credentials", "danger")
 
-    return render_template("admin_login.html")
+        current_user = User.query.filter_by(username=username).first()
+
+        if current_user:
+            
+            if current_user.password and check_password_hash(current_user.password, password):
+                session["user"] = current_user.username
+                flash("User login successful", "success")
+                return redirect(url_for("user_dashboard"))
+
+            temp_pass = redis_client.get(f"temp_pass:{username}")
+
+            if password == temp_pass:
+                session["user"] = current_user.username
+                redis_client.setex(f"first_login:{username}", 900, "true")
+                session["verified_email"] = current_user.email
+                flash("Please change your temporary password before continuing.", "warning")
+                return redirect(url_for("change_password"))
+            
+        flash("Invalid username or password", "danger")
+        
+    return render_template("login.html")
+
 
 @app.route("/admin-logout")
 def admin_logout():
     session.pop("is_admin", None)
-    flash("Logged out", "info")
+    flash("admin Logged out", "info")
     return redirect(url_for("resources"))
 
 # ---------------- PUBLIC RESOURCES ----------------
 @app.route("/resources")
-@require_password_change
 def resources():
-    links = Link.query.all()
-    files = FileUpload.query.all()
-    return render_template("resources.html", links=links, files=files)
+    username = session.get("user")
+    if username:
+        user = User.query.filter_by(username=username).first()
+        if user:
+            links = Link.query.filter_by(user_id=user.id).all()
+            files = FileUpload.query.filter_by(user_id=user.id).all()
+            return render_template(RESOURCES_TEMPLATE, links=links,files=files)
+    links=Link.query.filter_by(user_id=None).all()
+    files=FileUpload.query.filter_by(user_id=None).all()
+    return render_template(RESOURCES_TEMPLATE, links=links, files=files)
 
 # ---------------- DASHBOARD ----------------
 @app.route("/dashboard")
 @admin_required
 def dashboard():
-    links = Link.query.all()
-    files = FileUpload.query.all()
+    links=Link.query.filter_by(user_id=None).all()
+    files=FileUpload.query.filter_by(user_id=None).all()
     return render_template("dashboard.html", links=links, files=files)
 
 # ---------------- LINKS ----------------
@@ -225,26 +271,23 @@ def delete_link(id):
 @app.route("/add-file", methods=["GET","POST"])
 @admin_required
 def add_file():
-    if request.method == "POST":
-        file = request.files.get("file")
-        
-        if not file or file.filename == '' or not allowed_file(file.filename):
-            flash("No file selected or invalid file type", "danger")
-            return redirect(url_for("add_file"))
+            if request.method == "POST":
+                file = request.files.get("file")
+                
+                if not file or file.filename == '' or not allowed_file(file.filename):
+                    flash("No file selected or invalid file type", "danger")
+                    return redirect(url_for("add_file"))
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(UPLOAD_FOLDER, filename))
+                db.session.add(FileUpload(
+                    title=request.form["title"],
+                    filename=filename
+                ))
+                db.session.commit()
+                flash("File uploaded", "success")
+                return redirect(url_for("dashboard"))
+            return render_template("add_file.html")
 
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(UPLOAD_FOLDER, filename))
-
-        db.session.add(FileUpload(
-            title=request.form["title"],
-            filename=filename
-        ))
-        db.session.commit()
-
-        flash("File uploaded", "success")
-    return redirect(url_for("dashboard"))
-
-    return render_template("add_file.html")
 @app.route("/edit-file/<int:id>", methods=["GET", "POST"])
 @admin_required
 def edit_file(id):
@@ -261,8 +304,8 @@ def edit_file(id):
 def download(id):
     f = FileUpload.query.get_or_404(id)
     return send_from_directory(UPLOAD_FOLDER, f.filename, as_attachment=True)
-@app.route("/preview/<int:id>")
 
+@app.route("/preview/<int:id>")
 def preview_file(id):
     file = FileUpload.query.get_or_404(id)
     return send_from_directory(
@@ -448,18 +491,7 @@ def send_user_credentials_email(to, name, username, password):
     msg["From"] = os.getenv("EMAIL_FROM")
     msg["To"] = to
     msg["Subject"] = "Your Eknal Link account credentials"
-    msg.add_alternative(
-        f"""
-        <h3>Hello {name},</h3>
-        <p>Your account has been created successfully.</p>
-        <p><strong>Username:</strong> {username}</p>
-        <p><strong>Password:</strong> {password}</p>
-        <p>Please log in and change your password after first login.</p>
-        <a href="{url_for('login_user', _external=True)}" 
-           style="display:inline-block; background-color:#4CAF50; color:white; padding:10px 20px; border-radius:5px; text-decoration:none;">Login</a>
-        """,
-        subtype="html",
-    )
+    msg.add_alternative( render_template( "user_credentials_email.html", name=name, username=username, password=password, login_url=url_for("login", _external=True)), subtype="html",)
     server = smtplib.SMTP(os.getenv("EMAIL_HOST"), os.getenv("EMAIL_PORT"))
     server.starttls()
     server.login(
@@ -478,7 +510,7 @@ def generate_otp():
 
 
 def current_timestamp():
-    return datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    return datetime.now().isoformat(sep=" ", timespec="seconds")
 
 def save_otp(email, otp):
     redis_client.setex(f"otp:{email}", 300, otp)
@@ -522,6 +554,7 @@ def request_edit():
         return redirect(url_for("verify_otp"))
 
     return render_template("request_edit.html")
+
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
     if request.method == "POST":
@@ -560,6 +593,15 @@ def self_edit_collaborator():
         collaborator.name = request.form["name"]
         collaborator.resume_url = request.form["resume"]
         collaborator.contribution = request.form["contribution"]
+        photo = request.files.get("photo")
+        if photo and allowed_file(photo.filename):
+            if collaborator.photo and collaborator.photo != "default.png":
+                old_path = os.path.join(app.config["UPLOAD_FOLDER"], collaborator.photo)
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            filename = f"{datetime.now().timestamp()}_{secure_filename(photo.filename)}"
+            photo.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            collaborator.photo = filename
 
         db.session.commit()
 
@@ -657,41 +699,6 @@ def create_user():
     roles = Role.query.all()
     return render_template("create_user.html", roles=roles)
 
-# ----------------  Users_login ----------------
-
-@app.route("/user-login", methods=["GET","POST"])
-def login_user():
-    if request.method == "POST":
-        
-        username = request.form.get("username")
-        password = request.form.get("password")
-
-        if not username or not password:
-            flash("Please enter both username and password", "danger")
-            return render_template("user_login.html")
-
-        current_user = User.query.filter_by(username=username).first()
-
-        if current_user:
-            
-            if current_user.password and check_password_hash(current_user.password, password):
-                session["user"] = current_user.username
-                flash("Login successful", "success")
-                return redirect(url_for("resources"))
-
-        
-            temp_pass = redis_client.get(f"temp_pass:{username}")
-            if password == temp_pass:
-                session["user"] = current_user.username
-                redis_client.setex(f"first_login:{username}", 900, "true")
-                session["verified_email"] = current_user.email
-                flash("Please change your temporary password before continuing.", "warning")
-                return redirect(url_for("change_password"))
-        flash("Invalid username or password", "danger")
-
-    return render_template("user_login.html")
-
-
 # ----------------  Forget Password  ----------------
 
 @app.route("/user/forgot-password", methods=["GET", "POST"])
@@ -709,7 +716,7 @@ def forgot_password():
             session["otp_email"] = email
 
             flash("OTP sent to your email", "success")
-            return redirect(url_for("verify_otpUser"))
+            return redirect(url_for("verify_otpuser"))
 
         flash("Email not found", "danger")
 
@@ -717,8 +724,8 @@ def forgot_password():
 
 # ----------------  Verify OTP User ----------------
 
-@app.route("/verify_otpUser", methods=["GET", "POST"])
-def verify_otpUser():
+@app.route("/verify-otpUser", methods=["GET", "POST"])
+def verify_otpuser():
     if request.method == "POST":
         user_otp = request.form.get("otp")
         email = session.get("otp_email")  
@@ -775,12 +782,147 @@ def change_password():
             session.pop("otp_email", None)
 
             flash("Password changed successfully. Please log in.", "success")
-            return redirect(url_for("login_user"))
+            return redirect(url_for("login"))
 
 
         return render_template("Reset_password.html")
 
-   
+@app.route('/user-dashboard')
+@require_password_change
+@login_required
+def user_dashboard():
+    username=session.get("user")
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        flash("User not found", "danger")
+        return redirect(url_for("login"))
+    links=Link.query.filter_by(user_id=user.id).all()
+    files=FileUpload.query.filter_by(user_id=user.id).all()
+    return render_template("user_dashboard.html",links=links,files=files,current_user=user)
+
+@app.route('/u/<username>')
+def user_resources(username):
+        user = User.query.filter_by(username=username).first()
+        if user is None:
+            flash("user not found","danger")
+            return redirect(url_for("login"))
+        links=Link.query.filter_by(user_id=user.id).all()
+        files=FileUpload.query.filter_by(user_id=user.id).all()
+        return render_template(RESOURCES_TEMPLATE, links=links, files=files,user=user)
+
+@app.route("/user-logout")
+def user_logout():
+    session.pop("user", None)
+    flash("Logged out", "info")
+    return redirect(url_for("login"))
+
+@app.route("/user/add-link", methods=["GET","POST"])
+@login_required
+def user_add_link():
+    if request.method == "POST":
+        username = session.get("user")
+        user = User.query.filter_by(username=username).first()
+        db.session.add(Link(
+            title=request.form["title"],
+            url=request.form["url"],
+            user_id=user.id
+        ))
+        db.session.commit()
+        flash("Link added", "success")
+        return redirect(url_for("user_dashboard"))
+    return render_template("add_link.html")
+
+@app.route("/user/edit-link/<int:id>", methods=["GET","POST"])
+@login_required
+def user_edit_link(id):
+     
+    username = session.get("user")
+    user = User.query.filter_by(username=username).first()
+    link = Link.query.filter_by(id=id, user_id=user.id).first_or_404()
+
+    if request.method == "POST":
+        link.title = request.form["title"]
+        link.url = request.form["url"]
+        db.session.commit()
+        flash("Link updated", "success")
+        return redirect(url_for("user_dashboard"))
+
+    return render_template("edit_link.html", link=link)
+
+@app.route("/user/delete-link/<int:id>", methods=["POST"])
+@login_required
+def user_delete_link(id):
+    username = session.get("user")
+    user = User.query.filter_by(username=username).first()
+ 
+    link = Link.query.filter_by(id=id, user_id=user.id).first_or_404()
+
+    db.session.delete(link)
+    db.session.commit()
+    flash("Link deleted", "success")
+    return redirect(url_for("user_dashboard"))
+
+# ---------------- FILES ----------------
+@app.route("/user/add-file", methods=["GET","POST"])
+@login_required
+def user_add_file():
+            if request.method == "POST":
+                file = request.files.get("file")
+                
+                if not file or file.filename == '' or not allowed_file(file.filename):
+                    flash("No file selected or invalid file type", "danger")
+                    return redirect(url_for("user_add_file"))
+                filename = secure_filename(file.filename)
+                file.save(os.path.join(UPLOAD_FOLDER, filename))
+                username=session.get("user")
+                user = User.query.filter_by(username=username).first()
+                db.session.add(FileUpload(
+                    title=request.form["title"],
+                    filename=filename,
+                    user_id=user.id
+                ))
+                db.session.commit()
+                flash("File uploaded", "success")
+                return redirect(url_for("user_dashboard"))
+            return render_template("add_file.html")
+
+@app.route("/user/edit-file/<int:id>", methods=["GET", "POST"])
+@login_required
+def user_edit_file(id):
+
+    username = session.get("user")
+    user = User.query.filter_by(username=username).first()
+    file = FileUpload.query.filter_by(id=id,user_id=user.id).first_or_404()
+
+    if request.method == "POST":
+        file.title = request.form["title"]
+        db.session.commit()
+        flash("File updated", "success")
+        return redirect(url_for("user_dashboard"))
+
+    return render_template("edit_file.html", file=file)
+
+@app.route("/user/delete-file/<int:id>", methods=["POST"])
+@login_required
+def user_delete_file(id):
+
+    username = session.get("user")
+    user = User.query.filter_by(username=username).first()
+    f = FileUpload.query.filter_by(id=id,user_id=user.id).first_or_404()
+
+    path = os.path.join(UPLOAD_FOLDER, f.filename)
+    
+    db.session.delete(f)
+    db.session.commit()
+    
+    if os.path.exists(path):
+        os.remove(path)
+    
+    flash("File deleted", "success")
+    return redirect(url_for("user_dashboard"))
+
+
+
 # ---------------- RUN ----------------
 if __name__ == "__main__":
     app.run(debug=False, port = 9123)
